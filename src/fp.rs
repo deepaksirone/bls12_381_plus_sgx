@@ -2,7 +2,7 @@
 //! where `p = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab`
 
 use core::fmt;
-use core::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+use core::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign, BitOr};
 use rand_core::RngCore;
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
@@ -663,10 +663,28 @@ impl Fp {
         Self::montgomery_reduce(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11)
     }
 
+    /// Returns true whenever value is a square in the field
+    /// using Euler's criterion
+    #[inline]
+    pub fn is_square(&self) -> Choice {
+        const PM1DIV2: [u64; 6] = [
+            0xdcff_7fff_ffff_d555u64,
+            0x0f55_ffff_58a9_ffffu64,
+            0xb398_6950_7b58_7b12u64,
+            0xb23b_a5c2_79c2_895fu64,
+            0x258d_d3db_21a5_d66bu64,
+            0x0d00_88f5_1cbf_f34du64
+        ];
+
+        let res = self.pow_vartime(&PM1DIV2);
+        res.is_zero().bitor(res.ct_eq(&Self::one()))
+    }
+
     #[cfg(feature = "hashing")]
     #[inline]
     pub(crate) fn sgn0(&self) -> Sgn0Result {
-        if self.0[0] & 1 == 1 {
+        let bytes = self.to_bytes();
+        if bytes[47] & 1 == 1 {
             Sgn0Result::Negative
         } else {
             Sgn0Result::NonNegative
@@ -699,7 +717,7 @@ impl Fp {
     }
 
     #[cfg(feature = "hashing")]
-    pub(crate) fn hash_to_field<X>(msg: &[u8], dst: &[u8]) -> [Fp; 2]
+    pub(crate) fn hash<X>(msg: &[u8], dst: &[u8]) -> [Fp; 2]
     where
         X: ExpandMsg,
     {
@@ -712,7 +730,7 @@ impl Fp {
     }
 
     #[cfg(feature = "hashing")]
-    pub(crate) fn encode_to_field<X>(msg: &[u8], dst: &[u8]) -> Fp
+    pub(crate) fn encode<X>(msg: &[u8], dst: &[u8]) -> Fp
     where
         X: ExpandMsg,
     {
