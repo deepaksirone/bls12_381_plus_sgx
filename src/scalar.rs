@@ -1,6 +1,7 @@
 //! This module provides an implementation of the BLS12-381 scalar field $\mathbb{F}_q$
 //! where `q = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001`
 
+use core::convert::{TryFrom, TryInto};
 use core::fmt;
 use core::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use rand_core::RngCore;
@@ -715,8 +716,8 @@ impl Field for Scalar {
         Self::one()
     }
 
-    fn is_zero(&self) -> bool {
-        *self == Self::zero()
+    fn is_zero(&self) -> Choice {
+        Choice::from(if *self == Self::zero() { 1u8 } else {0u8})
     }
 
     #[must_use]
@@ -741,21 +742,16 @@ impl Field for Scalar {
 impl PrimeField for Scalar {
     type Repr = [u8; 32];
 
-    fn from_repr(r: Self::Repr) -> Option<Self> {
-        let t = Self::from_bytes(&r);
-        if t.is_some().unwrap_u8() == 1 {
-            Some(t.unwrap())
-        } else {
-            None
-        }
+    fn from_repr(r: Self::Repr) -> CtOption<Self> {
+        Self::from_bytes(&r)
     }
 
     fn to_repr(&self) -> Self::Repr {
         self.to_bytes()
     }
 
-    fn is_odd(&self) -> bool {
-        self.to_bytes()[0] & 1 == 1
+    fn is_odd(&self) -> Choice {
+        Choice::from(self.to_bytes()[0] & 1)
     }
 
     const NUM_BITS: u32 = MODULUS_BITS;
