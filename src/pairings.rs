@@ -1072,7 +1072,7 @@ fn serialization() {
     use rand_xorshift::XorShiftRng;
 
     let seed = [1u8; 16];
-    let mut rng = XorShiftRng::from_seed(seed);
+    let rng = XorShiftRng::from_seed(seed);
 
     let t1 = Gt::random(rng);
     let bytes = t1.to_bytes();
