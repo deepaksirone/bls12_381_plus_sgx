@@ -326,12 +326,16 @@ macro_rules! impl_serde {
 
                 let bytes = $serfunc(self);
 
-                let mut seq = s.serialize_tuple(bytes.len())?;
-                for b in &bytes[..] {
-                    seq.serialize_element(b)?;
-                }
+                if s.is_human_readable() {
+                    hex::encode(bytes).serialize(s)
+                } else {
+                    let mut seq = s.serialize_tuple(bytes.len())?;
+                    for b in &bytes[..] {
+                        seq.serialize_element(b)?;
+                    }
 
-                seq.end()
+                    seq.end()
+                }
             }
         }
 
@@ -369,9 +373,32 @@ macro_rules! impl_serde {
                             ))
                         }
                     }
+
+                    fn visit_str<E>(self, s: &str) -> Result<$name, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        let arr = hex::decode(s)
+                            .map_err(|_e| serde::de::Error::invalid_length(s.len(), &self))?;
+                        let mut tmp = [0u8; $len];
+                        tmp.copy_from_slice(&arr);
+                        let p = $deserfunc(&tmp);
+                        if p.is_some().unwrap_u8() == 1 {
+                            Ok(p.unwrap())
+                        } else {
+                            Err(serde::de::Error::invalid_value(
+                                serde::de::Unexpected::Bytes(&arr),
+                                &self,
+                            ))
+                        }
+                    }
                 }
 
-                deserializer.deserialize_tuple($len, ByteArrayVisitor)
+                if deserializer.is_human_readable() {
+                    deserializer.deserialize_str(ByteArrayVisitor)
+                } else {
+                    deserializer.deserialize_tuple($len, ByteArrayVisitor)
+                }
             }
         }
     };

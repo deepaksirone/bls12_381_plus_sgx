@@ -210,7 +210,7 @@ const ROOT_OF_UNITY: Scalar = Scalar([
 impl Default for Scalar {
     #[inline]
     fn default() -> Self {
-        Self::zero()
+        Self::ZERO
     }
 }
 
@@ -225,14 +225,22 @@ impl_serde!(
 );
 
 impl Scalar {
+    /// The additive identity.
+    pub const ZERO: Scalar = Scalar([0, 0, 0, 0]);
+
+    /// The multiplicative identity.
+    pub const ONE: Scalar = R;
+
     /// Returns zero, the additive identity.
     #[inline]
+    #[deprecated(since = "0.5.4", note = "Use ZERO instead.")]
     pub const fn zero() -> Scalar {
         Scalar([0, 0, 0, 0])
     }
 
     /// Returns one, the multiplicative identity.
     #[inline]
+    #[deprecated(since = "0.5.4", note = "Use ONE instead.")]
     pub const fn one() -> Scalar {
         R
     }
@@ -411,7 +419,7 @@ impl Scalar {
             let mut j_less_than_v: Choice = 1.into();
 
             for j in 2..max_v {
-                let tmp_is_one = tmp.ct_eq(&Scalar::one());
+                let tmp_is_one = tmp.ct_eq(&Scalar::ONE);
                 let squared = Scalar::conditional_select(&tmp, &z, tmp_is_one).square();
                 tmp = Scalar::conditional_select(&squared, &tmp, tmp_is_one);
                 let new_z = Scalar::conditional_select(&z, &squared, tmp_is_one);
@@ -421,7 +429,7 @@ impl Scalar {
             }
 
             let result = x * z;
-            x = Scalar::conditional_select(&result, &x, b.ct_eq(&Scalar::one()));
+            x = Scalar::conditional_select(&result, &x, b.ct_eq(&Scalar::ONE));
             z = z.square();
             b *= z;
             v = k;
@@ -436,7 +444,7 @@ impl Scalar {
     /// Exponentiates `self` by `by`, where `by` is a
     /// little-endian order integer exponent.
     pub fn pow(&self, by: &[u64; 4]) -> Self {
-        let mut res = Self::one();
+        let mut res = Self::ONE;
         for e in by.iter().rev() {
             for i in (0..64).rev() {
                 res = res.square();
@@ -455,7 +463,7 @@ impl Scalar {
     /// to the exponent.** If the exponent is fixed,
     /// this operation is effectively constant time.
     pub fn pow_vartime(&self, by: &[u64; 4]) -> Self {
-        let mut res = Self::one();
+        let mut res = Self::ONE;
         for e in by.iter().rev() {
             for i in (0..64).rev() {
                 res = res.square();
@@ -564,7 +572,7 @@ impl Scalar {
         square_assign_multi(&mut t0, 5);
         t0 *= &t1;
 
-        CtOption::new(t0, !self.ct_eq(&Self::zero()))
+        CtOption::new(t0, !self.ct_eq(&Self::ZERO))
     }
 
     #[inline(always)]
@@ -712,15 +720,15 @@ impl Field for Scalar {
     }
 
     fn zero() -> Self {
-        Self::zero()
+        Self::ZERO
     }
 
     fn one() -> Self {
-        Self::one()
+        Self::ONE
     }
 
     fn is_zero(&self) -> Choice {
-        Choice::from(u8::from(*self == Self::zero()))
+        Choice::from(u8::from(*self == Self::ZERO))
     }
 
     #[must_use]
@@ -826,7 +834,7 @@ where
     where
         I: Iterator<Item = T>,
     {
-        iter.fold(Self::zero(), |acc, item| acc + item.borrow())
+        iter.fold(Self::ZERO, |acc, item| acc + item.borrow())
     }
 }
 
@@ -838,7 +846,7 @@ where
     where
         I: Iterator<Item = T>,
     {
-        iter.fold(Self::one(), |acc, item| acc * item.borrow())
+        iter.fold(Self::ONE, |acc, item| acc * item.borrow())
     }
 }
 
@@ -861,11 +869,11 @@ fn test_inv() {
 #[test]
 fn test_debug() {
     assert_eq!(
-        format!("{:?}", Scalar::zero()),
+        format!("{:?}", Scalar::ZERO),
         "0x0000000000000000000000000000000000000000000000000000000000000000"
     );
     assert_eq!(
-        format!("{:?}", Scalar::one()),
+        format!("{:?}", Scalar::ONE),
         "0x0000000000000000000000000000000000000000000000000000000000000001"
     );
     assert_eq!(
@@ -876,18 +884,18 @@ fn test_debug() {
 
 #[test]
 fn test_equality() {
-    assert_eq!(Scalar::zero(), Scalar::zero());
-    assert_eq!(Scalar::one(), Scalar::one());
+    assert_eq!(Scalar::ZERO, Scalar::ZERO);
+    assert_eq!(Scalar::ONE, Scalar::ONE);
     assert_eq!(R2, R2);
 
-    assert!(Scalar::zero() != Scalar::one());
-    assert!(Scalar::one() != R2);
+    assert!(Scalar::ZERO != Scalar::ONE);
+    assert!(Scalar::ONE != R2);
 }
 
 #[test]
 fn test_to_bytes() {
     assert_eq!(
-        Scalar::zero().to_bytes(),
+        Scalar::ZERO.to_bytes(),
         [
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0
@@ -895,7 +903,7 @@ fn test_to_bytes() {
     );
 
     assert_eq!(
-        Scalar::one().to_bytes(),
+        Scalar::ONE.to_bytes(),
         [
             1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0
@@ -911,7 +919,7 @@ fn test_to_bytes() {
     );
 
     assert_eq!(
-        (-&Scalar::one()).to_bytes(),
+        (-&Scalar::ONE).to_bytes(),
         [
             0, 0, 0, 0, 255, 255, 255, 255, 254, 91, 254, 255, 2, 164, 189, 83, 5, 216, 161, 9, 8,
             216, 57, 51, 72, 125, 157, 41, 83, 167, 237, 115
@@ -927,7 +935,7 @@ fn test_from_bytes() {
             0, 0, 0
         ])
         .unwrap(),
-        Scalar::zero()
+        Scalar::ZERO
     );
 
     assert_eq!(
@@ -936,7 +944,7 @@ fn test_from_bytes() {
             0, 0, 0
         ])
         .unwrap(),
-        Scalar::one()
+        Scalar::ONE
     );
 
     assert_eq!(
@@ -993,7 +1001,7 @@ fn test_from_bytes() {
 #[test]
 fn test_from_u512_zero() {
     assert_eq!(
-        Scalar::zero(),
+        Scalar::ZERO,
         Scalar::from_u512([
             MODULUS.0[0],
             MODULUS.0[1],
@@ -1041,7 +1049,7 @@ fn test_from_bytes_wide_r2() {
 #[test]
 fn test_from_bytes_wide_negative_one() {
     assert_eq!(
-        -&Scalar::one(),
+        -&Scalar::ONE,
         Scalar::from_bytes_wide(&[
             0, 0, 0, 0, 255, 255, 255, 255, 254, 91, 254, 255, 2, 164, 189, 83, 5, 216, 161, 9, 8,
             216, 57, 51, 72, 125, 157, 41, 83, 167, 237, 115, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -1065,10 +1073,10 @@ fn test_from_bytes_wide_maximum() {
 
 #[test]
 fn test_zero() {
-    assert_eq!(Scalar::zero(), -&Scalar::zero());
-    assert_eq!(Scalar::zero(), Scalar::zero() + Scalar::zero());
-    assert_eq!(Scalar::zero(), Scalar::zero() - Scalar::zero());
-    assert_eq!(Scalar::zero(), Scalar::zero() * Scalar::zero());
+    assert_eq!(Scalar::ZERO, -&Scalar::ZERO);
+    assert_eq!(Scalar::ZERO, Scalar::ZERO + Scalar::ZERO);
+    assert_eq!(Scalar::ZERO, Scalar::ZERO - Scalar::ZERO);
+    assert_eq!(Scalar::ZERO, Scalar::ZERO * Scalar::ZERO);
 }
 
 #[cfg(test)]
@@ -1097,7 +1105,7 @@ fn test_addition() {
     let mut tmp = LARGEST;
     tmp += &Scalar([1, 0, 0, 0]);
 
-    assert_eq!(tmp, Scalar::zero());
+    assert_eq!(tmp, Scalar::ZERO);
 }
 
 #[test]
@@ -1106,8 +1114,8 @@ fn test_negation() {
 
     assert_eq!(tmp, Scalar([1, 0, 0, 0]));
 
-    let tmp = -&Scalar::zero();
-    assert_eq!(tmp, Scalar::zero());
+    let tmp = -&Scalar::ZERO;
+    assert_eq!(tmp, Scalar::ZERO);
     let tmp = -&Scalar([1, 0, 0, 0]);
     assert_eq!(tmp, LARGEST);
 }
@@ -1117,9 +1125,9 @@ fn test_subtraction() {
     let mut tmp = LARGEST;
     tmp -= &LARGEST;
 
-    assert_eq!(tmp, Scalar::zero());
+    assert_eq!(tmp, Scalar::ZERO);
 
-    let mut tmp = Scalar::zero();
+    let mut tmp = Scalar::ZERO;
     tmp -= &LARGEST;
 
     let mut tmp2 = MODULUS;
@@ -1136,7 +1144,7 @@ fn test_multiplication() {
         let mut tmp = cur;
         tmp *= &cur;
 
-        let mut tmp2 = Scalar::zero();
+        let mut tmp2 = Scalar::ZERO;
         for b in cur
             .to_bytes()
             .iter()
@@ -1165,7 +1173,7 @@ fn test_squaring() {
         let mut tmp = cur;
         tmp = tmp.square();
 
-        let mut tmp2 = Scalar::zero();
+        let mut tmp2 = Scalar::ZERO;
         for b in cur
             .to_bytes()
             .iter()
@@ -1188,9 +1196,9 @@ fn test_squaring() {
 
 #[test]
 fn test_inversion() {
-    assert!(bool::from(Scalar::zero().invert().is_none()));
-    assert_eq!(Scalar::one().invert().unwrap(), Scalar::one());
-    assert_eq!((-&Scalar::one()).invert().unwrap(), -&Scalar::one());
+    assert!(bool::from(Scalar::ZERO.invert().is_none()));
+    assert_eq!(Scalar::ONE.invert().unwrap(), Scalar::ONE);
+    assert_eq!((-&Scalar::ONE).invert().unwrap(), -&Scalar::ONE);
 
     let mut tmp = R2;
 
@@ -1198,7 +1206,7 @@ fn test_inversion() {
         let mut tmp2 = tmp.invert().unwrap();
         tmp2.mul_assign(&tmp);
 
-        assert_eq!(tmp2, Scalar::one());
+        assert_eq!(tmp2, Scalar::ONE);
 
         tmp.add_assign(&R2);
     }
@@ -1234,7 +1242,7 @@ fn test_invert_is_pow() {
 #[test]
 fn test_sqrt() {
     {
-        assert_eq!(Scalar::zero().sqrt().unwrap(), Scalar::zero());
+        assert_eq!(Scalar::ZERO.sqrt().unwrap(), Scalar::ZERO);
     }
 
     let mut square = Scalar([
@@ -1253,7 +1261,7 @@ fn test_sqrt() {
         } else {
             assert_eq!(square_root.unwrap() * square_root.unwrap(), square);
         }
-        square -= Scalar::one();
+        square -= Scalar::ONE;
     }
 
     assert_eq!(49, none_count);
@@ -1271,7 +1279,7 @@ fn test_from_raw() {
         Scalar::from_raw([0xffff_ffff_ffff_ffff; 4])
     );
 
-    assert_eq!(Scalar::from_raw(MODULUS.0), Scalar::zero());
+    assert_eq!(Scalar::from_raw(MODULUS.0), Scalar::ZERO);
 
     assert_eq!(Scalar::from_raw([1, 0, 0, 0]), R);
 }
@@ -1325,5 +1333,9 @@ fn test_serialization() {
     let vec = serde_bare::to_vec(&s1).unwrap();
     let s2: Scalar = serde_bare::from_slice(&vec).unwrap();
 
+    assert_eq!(s1, s2);
+
+    let hex1 = serde_json::to_string(&s1).unwrap();
+    let s2: Scalar = serde_json::from_str(&hex1).unwrap();
     assert_eq!(s1, s2);
 }

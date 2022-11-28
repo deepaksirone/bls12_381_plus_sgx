@@ -51,7 +51,7 @@ impl fmt::Display for G2Affine {
 
 impl<'a> From<&'a G2Projective> for G2Affine {
     fn from(p: &'a G2Projective) -> G2Affine {
-        let zinv = p.z.invert().unwrap_or(Fp2::zero());
+        let zinv = p.z.invert().unwrap_or(Fp2::ZERO);
         let x = p.x * zinv;
         let y = p.y * zinv;
 
@@ -110,7 +110,7 @@ impl<'a> Neg for &'a G2Affine {
     fn neg(self) -> G2Affine {
         G2Affine {
             x: self.x,
-            y: Fp2::conditional_select(&-self.y, &Fp2::one(), self.infinity),
+            y: Fp2::conditional_select(&-self.y, &Fp2::ONE, self.infinity),
             infinity: self.infinity,
         }
     }
@@ -201,8 +201,8 @@ impl G2Affine {
     /// Returns the identity of the group: the point at infinity.
     pub fn identity() -> G2Affine {
         G2Affine {
-            x: Fp2::zero(),
-            y: Fp2::one(),
+            x: Fp2::ZERO,
+            y: Fp2::ONE,
             infinity: Choice::from(1u8),
         }
     }
@@ -256,12 +256,12 @@ impl G2Affine {
     pub fn to_compressed(&self) -> [u8; 96] {
         // Strictly speaking, self.x is zero already when self.infinity is true, but
         // to guard against implementation mistakes we do not assume this.
-        let x = Fp2::conditional_select(&self.x, &Fp2::zero(), self.infinity);
+        let x = Fp2::conditional_select(&self.x, &Fp2::ZERO, self.infinity);
 
         let mut res = [0; 96];
 
-        (&mut res[0..48]).copy_from_slice(&x.c1.to_bytes()[..]);
-        (&mut res[48..96]).copy_from_slice(&x.c0.to_bytes()[..]);
+        res[0..48].copy_from_slice(&x.c1.to_bytes()[..]);
+        res[48..96].copy_from_slice(&x.c0.to_bytes()[..]);
 
         // This point is in compressed form, so we set the most significant bit.
         res[0] |= 1u8 << 7;
@@ -286,8 +286,8 @@ impl G2Affine {
     pub fn to_uncompressed(&self) -> [u8; 192] {
         let mut res = [0; 192];
 
-        let x = Fp2::conditional_select(&self.x, &Fp2::zero(), self.infinity);
-        let y = Fp2::conditional_select(&self.y, &Fp2::zero(), self.infinity);
+        let x = Fp2::conditional_select(&self.x, &Fp2::ZERO, self.infinity);
+        let y = Fp2::conditional_select(&self.y, &Fp2::ZERO, self.infinity);
 
         res[0..48].copy_from_slice(&x.c1.to_bytes()[..]);
         res[48..96].copy_from_slice(&x.c0.to_bytes()[..]);
@@ -497,7 +497,7 @@ impl G2Affine {
 impl_serde!(
     G2Affine,
     |p: &G2Affine| p.to_compressed(),
-    |arr: &[u8; 96]| G2Affine::from_compressed(arr),
+    G2Affine::from_compressed,
     96
 );
 
@@ -530,7 +530,7 @@ impl<'a> From<&'a G2Affine> for G2Projective {
         G2Projective {
             x: p.x,
             y: p.y,
-            z: Fp2::conditional_select(&Fp2::one(), &Fp2::zero(), p.infinity),
+            z: Fp2::conditional_select(&Fp2::ONE, &Fp2::ZERO, p.infinity),
         }
     }
 }
@@ -647,9 +647,9 @@ impl G2Projective {
     /// Returns the identity of the group: the point at infinity.
     pub fn identity() -> G2Projective {
         G2Projective {
-            x: Fp2::zero(),
-            y: Fp2::one(),
-            z: Fp2::zero(),
+            x: Fp2::ZERO,
+            y: Fp2::ONE,
+            z: Fp2::ZERO,
         }
     }
 
@@ -693,7 +693,7 @@ impl G2Projective {
                     0x0b2b_c2a1_63de_1bf2,
                 ]),
             },
-            z: Fp2::one(),
+            z: Fp2::ONE,
         }
     }
 
@@ -839,7 +839,7 @@ impl G2Projective {
     fn psi(&self) -> G2Projective {
         // 1 / ((u+1) ^ ((q-1)/3))
         let psi_coeff_x = Fp2 {
-            c0: Fp::zero(),
+            c0: Fp::ZERO,
             c1: Fp::from_raw_unchecked([
                 0x890dc9e4867545c3,
                 0x2af322533285a5d5,
@@ -890,7 +890,7 @@ impl G2Projective {
                 0x03f97d6e83d050d2,
                 0x18f0206554638741,
             ]),
-            c1: Fp::zero(),
+            c1: Fp::ZERO,
         };
 
         G2Projective {
@@ -943,7 +943,7 @@ impl G2Projective {
     pub fn batch_normalize(p: &[Self], q: &mut [G2Affine]) {
         assert_eq!(p.len(), q.len());
 
-        let mut acc = Fp2::one();
+        let mut acc = Fp2::ONE;
         for (p, q) in p.iter().zip(q.iter_mut()) {
             // We use the `x` field of `G2Affine` to store the product
             // of previous z-coordinates seen.
@@ -1020,7 +1020,7 @@ impl G2Projective {
     /// simplified swu map for q = 9 mod 16 where AB == 0
     fn sswu_map(u: &Fp2) -> Self {
         const A: Fp2 = Fp2 {
-            c0: Fp::zero(),
+            c0: Fp::ZERO,
             c1: Fp([
                 0xe53a000003135242u64,
                 0x01080c0fdef80285u64,
@@ -1106,7 +1106,7 @@ impl G2Projective {
         let tv1 = Z * u.square();
         let mut tv2 = tv1.square();
         let mut x1 = (tv1 + tv2).invert().unwrap();
-        x1 += Fp2::one();
+        x1 += Fp2::ONE;
         x1.conditional_assign(&Z_INV, x1.is_zero());
         x1 *= M_B_OVER_A;
         let gx1 = ((x1.square() + A) * x1) + B;
@@ -1119,11 +1119,7 @@ impl G2Projective {
         let mut y = y2.sqrt().unwrap();
         let e9 = u.sgn0() ^ y.sgn0();
         y.conditional_negate(Choice::from(e9.as_u8()));
-        Self {
-            x,
-            y,
-            z: Fp2::one(),
-        }
+        Self { x, y, z: Fp2::ONE }
     }
 
     #[cfg(feature = "hashing")]
@@ -1132,14 +1128,14 @@ impl G2Projective {
         use crate::isogeny::g2::*;
 
         fn compute(xxs: &[Fp2], k: &[Fp2]) -> Fp2 {
-            let mut xx = Fp2::zero();
+            let mut xx = Fp2::ZERO;
             for i in 0..k.len() {
                 xx += xxs[i] * k[i];
             }
             xx
         }
 
-        let mut xs = [Fp2::one(); 4];
+        let mut xs = [Fp2::ONE; 4];
         xs[1] = self.x;
         xs[2] = self.x.square();
         xs[3] = xs[2] * self.x;
@@ -1151,11 +1147,7 @@ impl G2Projective {
 
         let x = x_num * x_den.invert().unwrap();
         let y = self.y * y_num * y_den.invert().unwrap();
-        Self {
-            x,
-            y,
-            z: Fp2::one(),
-        }
+        Self { x, y, z: Fp2::ONE }
     }
 
     impl_pippenger_sum_of_products!();
@@ -1759,7 +1751,7 @@ fn test_projective_addition() {
                 0x03f9_7d6e_83d0_50d2,
                 0x18f0_2065_5463_8741,
             ]),
-            c1: Fp::zero(),
+            c1: Fp::ZERO,
         };
         let beta = beta.square();
         let a = G2Projective::generator().double().double();
@@ -1811,7 +1803,7 @@ fn test_projective_addition() {
                         0x11f9_5c16_d14c_3bbe,
                     ])
                 },
-                z: Fp2::one()
+                z: Fp2::ONE
             })
         );
         assert!(!bool::from(c.is_identity()));
@@ -1923,7 +1915,7 @@ fn test_mixed_addition() {
                 0x03f9_7d6e_83d0_50d2,
                 0x18f0_2065_5463_8741,
             ]),
-            c1: Fp::zero(),
+            c1: Fp::ZERO,
         };
         let beta = beta.square();
         let a = G2Projective::generator().double().double();
@@ -1976,7 +1968,7 @@ fn test_mixed_addition() {
                         0x11f9_5c16_d14c_3bbe,
                     ])
                 },
-                z: Fp2::one()
+                z: Fp2::ONE
             })
         );
         assert!(!bool::from(c.is_identity()));

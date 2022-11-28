@@ -32,7 +32,7 @@ impl fmt::Debug for Fp {
 
 impl Default for Fp {
     fn default() -> Self {
-        Fp::zero()
+        Fp::ZERO
     }
 }
 
@@ -163,21 +163,28 @@ impl_binops_additive!(Fp, Fp);
 impl_binops_multiplicative!(Fp, Fp);
 
 impl Fp {
+    /// The additive identity.
+    pub const ZERO: Fp = Fp([0, 0, 0, 0, 0, 0]);
+    /// The multiplicative identity.
+    pub const ONE: Fp = R;
+
     /// Returns zero, the additive identity.
     #[inline]
+    #[deprecated(since = "0.5.4", note = "Use ZERO instead.")]
     pub const fn zero() -> Fp {
         Fp([0, 0, 0, 0, 0, 0])
     }
 
     /// Returns one, the multiplicative identity.
     #[inline]
+    #[deprecated(since = "0.5.4", note = "Use ONE instead.")]
     pub const fn one() -> Fp {
         R
     }
 
     /// Returns true if field is the additive identity
     pub fn is_zero(&self) -> Choice {
-        self.ct_eq(&Fp::zero())
+        self.ct_eq(&Fp::ZERO)
     }
 
     /// Attempts to convert a big-endian byte representation of
@@ -314,7 +321,7 @@ impl Fp {
     /// variable time with respect to the exponent. It
     /// is also not exposed in the public API.
     pub(crate) fn pow_vartime(&self, by: &[u64; 6]) -> Self {
-        let mut res = Self::one();
+        let mut res = Self::ONE;
         for e in by.iter().rev() {
             for i in (0..64).rev() {
                 res = res.square();
@@ -630,7 +637,7 @@ impl Fp {
         ];
 
         let res = self.pow_vartime(&PM1DIV2);
-        res.is_zero().bitor(res.ct_eq(&Self::one()))
+        res.is_zero().bitor(res.ct_eq(&Self::ONE))
     }
 
     #[cfg(feature = "hashing")]
@@ -895,7 +902,7 @@ fn test_from_bytes() {
     }
 
     assert_eq!(
-        -Fp::one(),
+        -Fp::ONE,
         Fp::from_bytes(&[
             26, 1, 17, 234, 57, 127, 230, 154, 75, 27, 167, 182, 67, 75, 172, 215, 100, 119, 75,
             132, 243, 133, 18, 191, 103, 48, 210, 160, 246, 176, 246, 36, 30, 171, 255, 254, 177,
@@ -963,13 +970,13 @@ fn test_inversion() {
     ]);
 
     assert_eq!(a.invert().unwrap(), b);
-    assert!(bool::from(Fp::zero().invert().is_none()));
+    assert!(bool::from(Fp::ZERO.invert().is_none()));
 }
 
 #[test]
 fn test_lexicographic_largest() {
-    assert!(!bool::from(Fp::zero().lexicographically_largest()));
-    assert!(!bool::from(Fp::one().lexicographically_largest()));
+    assert!(!bool::from(Fp::ZERO.lexicographically_largest()));
+    assert!(!bool::from(Fp::ONE.lexicographically_largest()));
     assert!(!bool::from(
         Fp::from_raw_unchecked([
             0xa1fa_ffff_fffe_5557,

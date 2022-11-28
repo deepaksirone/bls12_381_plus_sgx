@@ -30,7 +30,7 @@ impl fmt::Debug for Fp2 {
 
 impl Default for Fp2 {
     fn default() -> Self {
-        Fp2::zero()
+        Fp2::ZERO
     }
 }
 
@@ -41,7 +41,7 @@ impl From<Fp> for Fp2 {
     fn from(f: Fp) -> Fp2 {
         Fp2 {
             c0: f,
-            c1: Fp::zero(),
+            c1: Fp::ZERO,
         }
     }
 }
@@ -118,21 +118,34 @@ impl_binops_additive!(Fp2, Fp2);
 impl_binops_multiplicative!(Fp2, Fp2);
 
 impl Fp2 {
+    /// The additive identity element
+    pub const ZERO: Fp2 = Fp2 {
+        c0: Fp::ZERO,
+        c1: Fp::ZERO,
+    };
+    /// The multiplicative identity element
+    pub const ONE: Fp2 = Fp2 {
+        c0: Fp::ONE,
+        c1: Fp::ZERO,
+    };
+
     /// Return the additive identity element
     #[inline]
+    #[deprecated(since = "0.5.4", note = "Use ZERO instead.")]
     pub const fn zero() -> Fp2 {
         Fp2 {
-            c0: Fp::zero(),
-            c1: Fp::zero(),
+            c0: Fp::ZERO,
+            c1: Fp::ZERO,
         }
     }
 
     /// Return the multiplicative identity element
     #[inline]
+    #[deprecated(since = "0.5.4", note = "Use ONE instead.")]
     pub const fn one() -> Fp2 {
         Fp2 {
-            c0: Fp::one(),
-            c1: Fp::zero(),
+            c0: Fp::ONE,
+            c1: Fp::ZERO,
         }
     }
 
@@ -281,7 +294,7 @@ impl Fp2 {
         // Algorithm 9, https://eprint.iacr.org/2012/685.pdf
         // with constant time modifications.
 
-        CtOption::new(Fp2::zero(), self.is_zero()).or_else(|| {
+        CtOption::new(Fp2::ZERO, self.is_zero()).or_else(|| {
             // a1 = self^((p - 3) / 4)
             let a1 = self.pow_vartime(&[
                 0xee7f_bfff_ffff_eaaa,
@@ -307,12 +320,12 @@ impl Fp2 {
                     c0: -x0.c1,
                     c1: x0.c0,
                 },
-                alpha.ct_eq(&(&Fp2::one()).neg()),
+                alpha.ct_eq(&Fp2::ONE.neg()),
             )
             // Otherwise, the correct solution is (1 + alpha)^((q - 1) // 2) * x0
             .or_else(|| {
                 CtOption::new(
-                    (alpha + Fp2::one()).pow_vartime(&[
+                    (alpha + Fp2::ONE).pow_vartime(&[
                         0xdcff_7fff_ffff_d555,
                         0x0f55_ffff_58a9_ffff,
                         0xb398_6950_7b58_7b12,
@@ -357,7 +370,7 @@ impl Fp2 {
     /// variable time with respect to the exponent. It
     /// is also not exposed in the public API.
     pub(crate) fn pow_vartime(&self, by: &[u64; 6]) -> Self {
-        let mut res = Self::one();
+        let mut res = Self::ONE;
         for e in by.iter().rev() {
             for i in (0..64).rev() {
                 res = res.square();
@@ -778,7 +791,7 @@ fn test_sqrt() {
             0x9fb4_e61d_1e83_eac5,
             0x005c_b922_afe8_4dc7,
         ]),
-        c1: Fp::zero(),
+        c1: Fp::ZERO,
     };
 
     assert_eq!(b.sqrt().unwrap().square(), b);
@@ -794,7 +807,7 @@ fn test_sqrt() {
             0xd36c_d6db_5547_e905,
             0x02f8_c8ec_bf18_67bb,
         ]),
-        c1: Fp::zero(),
+        c1: Fp::ZERO,
     };
 
     assert_eq!(c.sqrt().unwrap().square(), c);
@@ -867,13 +880,13 @@ fn test_inversion() {
 
     assert_eq!(a.invert().unwrap(), b);
 
-    assert!(bool::from(Fp2::zero().invert().is_none()));
+    assert!(bool::from(Fp2::ZERO.invert().is_none()));
 }
 
 #[test]
 fn test_lexicographic_largest() {
-    assert!(!bool::from(Fp2::zero().lexicographically_largest()));
-    assert!(!bool::from(Fp2::one().lexicographically_largest()));
+    assert!(!bool::from(Fp2::ZERO.lexicographically_largest()));
+    assert!(!bool::from(Fp2::ONE.lexicographically_largest()));
     assert!(bool::from(
         Fp2 {
             c0: Fp::from_raw_unchecked([
@@ -926,7 +939,7 @@ fn test_lexicographic_largest() {
                 0x736c_3a59_232d_511d,
                 0x10ac_d42d_29cf_cbb6,
             ]),
-            c1: Fp::zero(),
+            c1: Fp::ZERO,
         }
         .lexicographically_largest()
     ));
@@ -940,7 +953,7 @@ fn test_lexicographic_largest() {
                 0x736c_3a59_232d_511d,
                 0x10ac_d42d_29cf_cbb6,
             ]),
-            c1: Fp::zero(),
+            c1: Fp::ZERO,
         }
         .lexicographically_largest()
     ));
@@ -951,7 +964,7 @@ fn test_lexicographic_largest() {
 fn test_zeroize() {
     use zeroize::Zeroize;
 
-    let mut a = Fp2::one();
+    let mut a = Fp2::ONE;
     a.zeroize();
     assert!(bool::from(a.is_zero()));
 }

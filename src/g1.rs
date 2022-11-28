@@ -50,7 +50,7 @@ impl fmt::Display for G1Affine {
 
 impl<'a> From<&'a G1Projective> for G1Affine {
     fn from(p: &'a G1Projective) -> G1Affine {
-        let zinv = p.z.invert().unwrap_or(Fp::zero());
+        let zinv = p.z.invert().unwrap_or(Fp::ZERO);
         let x = p.x * zinv;
         let y = p.y * zinv;
 
@@ -109,7 +109,7 @@ impl<'a> Neg for &'a G1Affine {
     fn neg(self) -> G1Affine {
         G1Affine {
             x: self.x,
-            y: Fp::conditional_select(&-self.y, &Fp::one(), self.infinity),
+            y: Fp::conditional_select(&-self.y, &Fp::ONE, self.infinity),
             infinity: self.infinity,
         }
     }
@@ -188,8 +188,8 @@ impl G1Affine {
     /// Returns the identity of the group: the point at infinity.
     pub fn identity() -> G1Affine {
         G1Affine {
-            x: Fp::zero(),
-            y: Fp::one(),
+            x: Fp::ZERO,
+            y: Fp::ONE,
             infinity: Choice::from(1u8),
         }
     }
@@ -223,7 +223,7 @@ impl G1Affine {
     pub fn to_compressed(&self) -> [u8; 48] {
         // Strictly speaking, self.x is zero already when self.infinity is true, but
         // to guard against implementation mistakes we do not assume this.
-        let mut res = Fp::conditional_select(&self.x, &Fp::zero(), self.infinity).to_bytes();
+        let mut res = Fp::conditional_select(&self.x, &Fp::ZERO, self.infinity).to_bytes();
 
         // This point is in compressed form, so we set the most significant bit.
         res[0] |= 1u8 << 7;
@@ -249,10 +249,10 @@ impl G1Affine {
         let mut res = [0; 96];
 
         res[0..48].copy_from_slice(
-            &Fp::conditional_select(&self.x, &Fp::zero(), self.infinity).to_bytes()[..],
+            &Fp::conditional_select(&self.x, &Fp::ZERO, self.infinity).to_bytes()[..],
         );
         res[48..96].copy_from_slice(
-            &Fp::conditional_select(&self.y, &Fp::zero(), self.infinity).to_bytes()[..],
+            &Fp::conditional_select(&self.y, &Fp::ZERO, self.infinity).to_bytes()[..],
         );
 
         // Is this point at infinity? If so, set the second-most significant bit.
@@ -423,7 +423,7 @@ impl G1Affine {
 impl_serde!(
     G1Affine,
     |p: &G1Affine| p.to_compressed(),
-    |arr: &[u8; 48]| G1Affine::from_compressed(arr),
+    G1Affine::from_compressed,
     48
 );
 
@@ -456,7 +456,7 @@ impl<'a> From<&'a G1Affine> for G1Projective {
         G1Projective {
             x: p.x,
             y: p.y,
-            z: Fp::conditional_select(&Fp::one(), &Fp::zero(), p.infinity),
+            z: Fp::conditional_select(&Fp::ONE, &Fp::ZERO, p.infinity),
         }
     }
 }
@@ -594,9 +594,9 @@ impl G1Projective {
     /// Returns the identity of the group: the point at infinity.
     pub fn identity() -> G1Projective {
         G1Projective {
-            x: Fp::zero(),
-            y: Fp::one(),
-            z: Fp::zero(),
+            x: Fp::ZERO,
+            y: Fp::ONE,
+            z: Fp::ZERO,
         }
     }
 
@@ -620,7 +620,7 @@ impl G1Projective {
                 0x0e1c_8c3f_ad00_59c0,
                 0x0bbc_3efc_5008_a26a,
             ]),
-            z: Fp::one(),
+            z: Fp::ONE,
         }
     }
 
@@ -796,7 +796,7 @@ impl G1Projective {
     pub fn batch_normalize(p: &[Self], q: &mut [G1Affine]) {
         assert_eq!(p.len(), q.len());
 
-        let mut acc = Fp::one();
+        let mut acc = Fp::ONE;
         for (p, q) in p.iter().zip(q.iter_mut()) {
             // We use the `x` field of `G1Affine` to store the product
             // of previous z-coordinates seen.
@@ -871,14 +871,14 @@ impl G1Projective {
         use crate::isogeny::g1::*;
 
         fn compute(xxs: &[Fp], k: &[Fp]) -> Fp {
-            let mut xx = Fp::zero();
+            let mut xx = Fp::ZERO;
             for i in 0..k.len() {
                 xx += xxs[i] * k[i];
             }
             xx
         }
 
-        let mut xs = [Fp::one(); 16];
+        let mut xs = [Fp::ONE; 16];
         xs[1] = self.x;
         xs[2] = self.x.square();
         for i in 3..16 {
@@ -892,7 +892,7 @@ impl G1Projective {
 
         let x = x_num * x_den.invert().unwrap();
         let y = self.y * y_num * y_den.invert().unwrap();
-        Self { x, y, z: Fp::one() }
+        Self { x, y, z: Fp::ONE }
     }
 
     #[cfg(feature = "hashing")]
@@ -952,7 +952,7 @@ impl G1Projective {
         let mut xd = tv2 + tv3;
         // x1n = xd + 1
         // x1n = x1n * B
-        let x1n = (xd + Fp::one()) * B;
+        let x1n = (xd + Fp::ONE) * B;
         // xd = -A * xd
         xd *= A.neg();
         // xd = CMOV(xd, Z * A, xd == 0)
@@ -982,7 +982,7 @@ impl G1Projective {
         Self {
             x: x2n * xd.invert().unwrap(),
             y: y2,
-            z: Fp::one(),
+            z: Fp::ONE,
         }
     }
 
@@ -1528,7 +1528,7 @@ fn test_projective_addition() {
                     0x0bc3_b8d5_fb04_47f7,
                     0x07bf_a4c7_210f_4f44,
                 ]),
-                z: Fp::one()
+                z: Fp::ONE
             })
         );
         assert!(!bool::from(c.is_identity()));
@@ -1650,7 +1650,7 @@ fn test_mixed_addition() {
                     0x0bc3_b8d5_fb04_47f7,
                     0x07bf_a4c7_210f_4f44,
                 ]),
-                z: Fp::one()
+                z: Fp::ONE
             })
         );
         assert!(!bool::from(c.is_identity()));

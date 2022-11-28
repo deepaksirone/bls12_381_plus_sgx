@@ -26,7 +26,7 @@ pub struct MillerLoopResult(pub(crate) Fp12);
 
 impl Default for MillerLoopResult {
     fn default() -> Self {
-        MillerLoopResult(Fp12::one())
+        MillerLoopResult(Fp12::ONE)
     }
 }
 
@@ -113,7 +113,7 @@ impl MillerLoopResult {
         #[must_use]
         fn cycolotomic_exp(f: Fp12) -> Fp12 {
             let x = BLS_X;
-            let mut tmp = Fp12::one();
+            let mut tmp = Fp12::ONE;
             let mut found_one = false;
             for i in (0..64).rev().map(|b| ((x >> b) & 1) == 1) {
                 if found_one {
@@ -246,7 +246,7 @@ impl Gt {
 
     /// Returns the group identity, which is $1$.
     pub fn identity() -> Gt {
-        Gt(Fp12::one())
+        Gt(Fp12::ONE)
     }
 
     /// Doubles this group element.
@@ -690,7 +690,7 @@ pub fn multi_miller_loop(terms: &[(&G1Affine, &G2Prepared)]) -> MillerLoopResult
             f.conjugate()
         }
         fn one() -> Self::Output {
-            Fp12::one()
+            Fp12::ONE
         }
     }
 
@@ -728,7 +728,7 @@ pub fn pairing(p: &G1Affine, q: &G2Affine) -> Gt {
             f.conjugate()
         }
         fn one() -> Self::Output {
-            Fp12::one()
+            Fp12::ONE
         }
     }
 
@@ -743,11 +743,7 @@ pub fn pairing(p: &G1Affine, q: &G2Affine) -> Gt {
     };
 
     let tmp = miller_loop(&mut adder);
-    let tmp = MillerLoopResult(Fp12::conditional_select(
-        &tmp,
-        &Fp12::one(),
-        either_identity,
-    ));
+    let tmp = MillerLoopResult(Fp12::conditional_select(&tmp, &Fp12::ONE, either_identity));
     tmp.final_exponentiation()
 }
 
@@ -1042,11 +1038,11 @@ fn test_miller_loop_result_zeroize() {
 fn tricking_miller_loop_result() {
     assert_eq!(
         multi_miller_loop(&[(&G1Affine::identity(), &G2Affine::generator().into())]).0,
-        Fp12::one()
+        Fp12::ONE
     );
     assert_eq!(
         multi_miller_loop(&[(&G1Affine::generator(), &G2Affine::identity().into())]).0,
-        Fp12::one()
+        Fp12::ONE
     );
     assert_ne!(
         multi_miller_loop(&[
@@ -1054,7 +1050,7 @@ fn tricking_miller_loop_result() {
             (&-G1Affine::generator(), &G2Affine::generator().into())
         ])
         .0,
-        Fp12::one()
+        Fp12::ONE
     );
     assert_eq!(
         multi_miller_loop(&[
