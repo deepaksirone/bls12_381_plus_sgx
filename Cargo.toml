@@ -14,7 +14,7 @@ homepage = "https://github.com/mikelodder7/bls12_381_plus"
 license = "MIT/Apache-2.0"
 name = "bls12_381_plus"
 repository = "https://github.com/mikelodder7/bls12_381_plus"
-version = "0.5.4"
+version = "0.5.5"
 edition = "2021"
 
 [package.metadata.docs.rs]
@@ -87,4 +87,3 @@ hashing = ["digest"]
 pairings = ["groups", "pairing"]
 alloc = ["group/alloc"]
 experimental = ["digest"]
-nightly = ["subtle/nightly"]

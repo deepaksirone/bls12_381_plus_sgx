@@ -211,7 +211,7 @@ pub struct Gt(pub(crate) Fp12);
 
 impl Default for Gt {
     fn default() -> Self {
-        Self::identity()
+        Self::IDENTITY
     }
 }
 
@@ -242,9 +242,13 @@ impl PartialEq for Gt {
 }
 
 impl Gt {
+    /// The group identity, which is $1$.
+    pub const IDENTITY: Self = Self(Fp12::ONE);
+
     const BYTES: usize = 576;
 
     /// Returns the group identity, which is $1$.
+    #[deprecated(since = "0.5.5", note = "Use IDENTITY instead.")]
     pub fn identity() -> Gt {
         Gt(Fp12::ONE)
     }
@@ -389,7 +393,7 @@ impl<'a, 'b> Mul<&'b Scalar> for &'a Gt {
     type Output = Gt;
 
     fn mul(self, other: &'b Scalar) -> Self::Output {
-        let mut acc = Gt::identity();
+        let mut acc = Gt::IDENTITY;
 
         // This is a simple double-and-add implementation of group element
         // multiplication, moving from most significant to least
@@ -423,7 +427,7 @@ where
     where
         I: Iterator<Item = T>,
     {
-        iter.fold(Self::identity(), |acc, item| acc + item.borrow())
+        iter.fold(Self::IDENTITY, |acc, item| acc + item.borrow())
     }
 }
 
@@ -444,7 +448,7 @@ impl Group for Gt {
     }
 
     fn identity() -> Self {
-        Self::identity()
+        Self::IDENTITY
     }
 
     fn generator() -> Self {
@@ -566,7 +570,7 @@ impl Group for Gt {
     }
 
     fn is_identity(&self) -> Choice {
-        self.ct_eq(&Self::identity())
+        self.ct_eq(&Self::IDENTITY)
     }
 
     #[must_use]
@@ -937,7 +941,7 @@ fn test_bilinearity() {
     let h = G2Affine::from(G2Affine::generator() * b);
     let p = pairing(&g, &h);
 
-    assert!(p != Gt::identity());
+    assert_ne!(p, Gt::IDENTITY);
 
     let expected = G1Affine::from(G1Affine::generator() * c);
 
@@ -1017,7 +1021,7 @@ fn test_multi_miller_loop() {
 fn test_miller_loop_result_default() {
     assert_eq!(
         MillerLoopResult::default().final_exponentiation(),
-        Gt::identity(),
+        Gt::IDENTITY,
     );
 }
 
@@ -1058,7 +1062,7 @@ fn tricking_miller_loop_result() {
             (&-G1Affine::generator(), &G2Affine::generator().into())
         ])
         .final_exponentiation(),
-        Gt::identity()
+        Gt::IDENTITY
     );
 }
 

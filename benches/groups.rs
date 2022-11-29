@@ -58,12 +58,12 @@ fn criterion_benchmark(c: &mut Criterion) {
     // G1Projective
     {
         let name = "G1Projective";
-        let a = G1Projective::generator();
+        let a = G1Projective::GENERATOR;
         let a_affine = G1Affine::generator();
         let s = Scalar::from_raw([1, 2, 3, 4]);
 
         const N: usize = 10000;
-        let v = vec![G1Projective::generator(); N];
+        let v = vec![G1Projective::GENERATOR; N];
         let mut q = vec![G1Affine::identity(); N];
 
         c.bench_function(&format!("{} check on curve", name), move |b| {
@@ -127,12 +127,12 @@ fn criterion_benchmark(c: &mut Criterion) {
     // G2Projective
     {
         let name = "G2Projective";
-        let a = G2Projective::generator();
+        let a = G2Projective::GENERATOR;
         let a_affine = G2Affine::generator();
         let s = Scalar::from_raw([1, 2, 3, 4]);
 
         const N: usize = 10000;
-        let v = vec![G2Projective::generator(); N];
+        let v = vec![G2Projective::GENERATOR; N];
         let mut q = vec![G2Affine::identity(); N];
 
         c.bench_function(&format!("{} check on curve", name), move |b| {

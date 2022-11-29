@@ -169,7 +169,7 @@ where
     where
         I: Iterator<Item = T>,
     {
-        iter.fold(Self::identity(), |acc, item| acc + item.borrow())
+        iter.fold(Self::IDENTITY, |acc, item| acc + item.borrow())
     }
 }
 
@@ -512,7 +512,7 @@ pub struct G2Projective {
 
 impl Default for G2Projective {
     fn default() -> G2Projective {
-        G2Projective::identity()
+        G2Projective::IDENTITY
     }
 }
 
@@ -644,57 +644,66 @@ fn mul_by_3b(x: Fp2) -> Fp2 {
 }
 
 impl G2Projective {
+    /// The identity of the group: the point at infinity.
+    pub const IDENTITY: Self = Self {
+        x: Fp2::ZERO,
+        y: Fp2::ONE,
+        z: Fp2::ZERO,
+    };
+
     /// Returns the identity of the group: the point at infinity.
+    #[deprecated(since = "0.5.5", note = "Use IDENTITY instead.")]
     pub fn identity() -> G2Projective {
-        G2Projective {
-            x: Fp2::ZERO,
-            y: Fp2::ONE,
-            z: Fp2::ZERO,
-        }
+        Self::IDENTITY
     }
+
+    /// The fixed generator of the group. See [`notes::design`](notes/design/index.html#fixed-generators)
+    /// for how this generator is chosen.
+    pub const GENERATOR: Self = Self {
+        x: Fp2 {
+            c0: Fp::from_raw_unchecked([
+                0xf5f2_8fa2_0294_0a10,
+                0xb3f5_fb26_87b4_961a,
+                0xa1a8_93b5_3e2a_e580,
+                0x9894_999d_1a3c_aee9,
+                0x6f67_b763_1863_366b,
+                0x0581_9192_4350_bcd7,
+            ]),
+            c1: Fp::from_raw_unchecked([
+                0xa5a9_c075_9e23_f606,
+                0xaaa0_c59d_bccd_60c3,
+                0x3bb1_7e18_e286_7806,
+                0x1b1a_b6cc_8541_b367,
+                0xc2b6_ed0e_f215_8547,
+                0x1192_2a09_7360_edf3,
+            ]),
+        },
+        y: Fp2 {
+            c0: Fp::from_raw_unchecked([
+                0x4c73_0af8_6049_4c4a,
+                0x597c_fa1f_5e36_9c5a,
+                0xe7e6_856c_aa0a_635a,
+                0xbbef_b5e9_6e0d_495f,
+                0x07d3_a975_f0ef_25a2,
+                0x0083_fd8e_7e80_dae5,
+            ]),
+            c1: Fp::from_raw_unchecked([
+                0xadc0_fc92_df64_b05d,
+                0x18aa_270a_2b14_61dc,
+                0x86ad_ac6a_3be4_eba0,
+                0x7949_5c4e_c93d_a33a,
+                0xe717_5850_a43c_caed,
+                0x0b2b_c2a1_63de_1bf2,
+            ]),
+        },
+        z: Fp2::ONE,
+    };
 
     /// Returns a fixed generator of the group. See [`notes::design`](notes/design/index.html#fixed-generators)
     /// for how this generator is chosen.
+    #[deprecated(since = "0.5.5", note = "Use GENERATOR instead.")]
     pub fn generator() -> G2Projective {
-        G2Projective {
-            x: Fp2 {
-                c0: Fp::from_raw_unchecked([
-                    0xf5f2_8fa2_0294_0a10,
-                    0xb3f5_fb26_87b4_961a,
-                    0xa1a8_93b5_3e2a_e580,
-                    0x9894_999d_1a3c_aee9,
-                    0x6f67_b763_1863_366b,
-                    0x0581_9192_4350_bcd7,
-                ]),
-                c1: Fp::from_raw_unchecked([
-                    0xa5a9_c075_9e23_f606,
-                    0xaaa0_c59d_bccd_60c3,
-                    0x3bb1_7e18_e286_7806,
-                    0x1b1a_b6cc_8541_b367,
-                    0xc2b6_ed0e_f215_8547,
-                    0x1192_2a09_7360_edf3,
-                ]),
-            },
-            y: Fp2 {
-                c0: Fp::from_raw_unchecked([
-                    0x4c73_0af8_6049_4c4a,
-                    0x597c_fa1f_5e36_9c5a,
-                    0xe7e6_856c_aa0a_635a,
-                    0xbbef_b5e9_6e0d_495f,
-                    0x07d3_a975_f0ef_25a2,
-                    0x0083_fd8e_7e80_dae5,
-                ]),
-                c1: Fp::from_raw_unchecked([
-                    0xadc0_fc92_df64_b05d,
-                    0x18aa_270a_2b14_61dc,
-                    0x86ad_ac6a_3be4_eba0,
-                    0x7949_5c4e_c93d_a33a,
-                    0xe717_5850_a43c_caed,
-                    0x0b2b_c2a1_63de_1bf2,
-                ]),
-            },
-            z: Fp2::ONE,
-        }
+        Self::GENERATOR
     }
 
     /// Computes the doubling of this point.
@@ -726,7 +735,7 @@ impl G2Projective {
             z: z3,
         };
 
-        G2Projective::conditional_select(&tmp, &G2Projective::identity(), self.is_identity())
+        G2Projective::conditional_select(&tmp, &G2Projective::IDENTITY, self.is_identity())
     }
 
     /// Adds this point to another point.
@@ -815,7 +824,7 @@ impl G2Projective {
     }
 
     fn multiply(&self, by: &[u8]) -> G2Projective {
-        let mut acc = G2Projective::identity();
+        let mut acc = G2Projective::IDENTITY;
 
         // This is a simple double-and-add implementation of point
         // multiplication, moving from most significant to least
@@ -905,7 +914,7 @@ impl G2Projective {
 
     /// Multiply `self` by `crate::BLS_X`, using double and add.
     fn mul_by_x(&self) -> G2Projective {
-        let mut xself = G2Projective::identity();
+        let mut xself = G2Projective::IDENTITY;
         // NOTE: in BLS12-381 we can just skip the first bit.
         let mut x = crate::BLS_X >> 1;
         let mut acc = *self;
@@ -1268,11 +1277,11 @@ impl Group for G2Projective {
     }
 
     fn identity() -> Self {
-        Self::identity()
+        Self::IDENTITY
     }
 
     fn generator() -> Self {
-        Self::generator()
+        Self::GENERATOR
     }
 
     fn is_identity(&self) -> Choice {
@@ -1412,8 +1421,8 @@ impl<'de> serde::Deserialize<'de> for G2Projective {
 fn test_is_on_curve() {
     assert!(bool::from(G2Affine::identity().is_on_curve()));
     assert!(bool::from(G2Affine::generator().is_on_curve()));
-    assert!(bool::from(G2Projective::identity().is_on_curve()));
-    assert!(bool::from(G2Projective::generator().is_on_curve()));
+    assert!(bool::from(G2Projective::IDENTITY.is_on_curve()));
+    assert!(bool::from(G2Projective::GENERATOR.is_on_curve()));
 
     let z = Fp2 {
         c0: Fp::from_raw_unchecked([
@@ -1462,8 +1471,8 @@ fn test_affine_point_equality() {
 #[test]
 #[allow(clippy::eq_op)]
 fn test_projective_point_equality() {
-    let a = G2Projective::generator();
-    let b = G2Projective::identity();
+    let a = G2Projective::GENERATOR;
+    let b = G2Projective::IDENTITY;
 
     assert!(a == a);
     assert!(b == b);
@@ -1528,8 +1537,8 @@ fn test_conditionally_select_affine() {
 
 #[test]
 fn test_conditionally_select_projective() {
-    let a = G2Projective::generator();
-    let b = G2Projective::identity();
+    let a = G2Projective::GENERATOR;
+    let b = G2Projective::IDENTITY;
 
     assert_eq!(
         G2Projective::conditional_select(&a, &b, Choice::from(0u8)),
@@ -1543,8 +1552,8 @@ fn test_conditionally_select_projective() {
 
 #[test]
 fn test_projective_to_affine() {
-    let a = G2Projective::generator();
-    let b = G2Projective::identity();
+    let a = G2Projective::GENERATOR;
+    let b = G2Projective::IDENTITY;
 
     assert!(bool::from(G2Affine::from(a).is_on_curve()));
     assert!(!bool::from(G2Affine::from(a).is_identity()));
@@ -1593,12 +1602,12 @@ fn test_affine_to_projective() {
 #[test]
 fn test_doubling() {
     {
-        let tmp = G2Projective::identity().double();
+        let tmp = G2Projective::IDENTITY.double();
         assert!(bool::from(tmp.is_identity()));
         assert!(bool::from(tmp.is_on_curve()));
     }
     {
-        let tmp = G2Projective::generator().double();
+        let tmp = G2Projective::GENERATOR.double();
         assert!(!bool::from(tmp.is_identity()));
         assert!(bool::from(tmp.is_on_curve()));
 
@@ -1650,15 +1659,15 @@ fn test_doubling() {
 #[test]
 fn test_projective_addition() {
     {
-        let a = G2Projective::identity();
-        let b = G2Projective::identity();
+        let a = G2Projective::IDENTITY;
+        let b = G2Projective::IDENTITY;
         let c = a + b;
         assert!(bool::from(c.is_identity()));
         assert!(bool::from(c.is_on_curve()));
     }
     {
-        let a = G2Projective::identity();
-        let mut b = G2Projective::generator();
+        let a = G2Projective::IDENTITY;
+        let mut b = G2Projective::GENERATOR;
         {
             let z = Fp2 {
                 c0: Fp::from_raw_unchecked([
@@ -1688,11 +1697,11 @@ fn test_projective_addition() {
         let c = a + b;
         assert!(!bool::from(c.is_identity()));
         assert!(bool::from(c.is_on_curve()));
-        assert!(c == G2Projective::generator());
+        assert!(c == G2Projective::GENERATOR);
     }
     {
-        let a = G2Projective::identity();
-        let mut b = G2Projective::generator();
+        let a = G2Projective::IDENTITY;
+        let mut b = G2Projective::GENERATOR;
         {
             let z = Fp2 {
                 c0: Fp::from_raw_unchecked([
@@ -1722,16 +1731,16 @@ fn test_projective_addition() {
         let c = b + a;
         assert!(!bool::from(c.is_identity()));
         assert!(bool::from(c.is_on_curve()));
-        assert!(c == G2Projective::generator());
+        assert!(c == G2Projective::GENERATOR);
     }
     {
-        let a = G2Projective::generator().double().double(); // 4P
-        let b = G2Projective::generator().double(); // 2P
+        let a = G2Projective::GENERATOR.double().double(); // 4P
+        let b = G2Projective::GENERATOR.double(); // 2P
         let c = a + b;
 
-        let mut d = G2Projective::generator();
+        let mut d = G2Projective::GENERATOR;
         for _ in 0..5 {
-            d += G2Projective::generator();
+            d += G2Projective::GENERATOR;
         }
         assert!(!bool::from(c.is_identity()));
         assert!(bool::from(c.is_on_curve()));
@@ -1754,7 +1763,7 @@ fn test_projective_addition() {
             c1: Fp::ZERO,
         };
         let beta = beta.square();
-        let a = G2Projective::generator().double().double();
+        let a = G2Projective::GENERATOR.double().double();
         let b = G2Projective {
             x: a.x * beta,
             y: -a.y,
@@ -1815,14 +1824,14 @@ fn test_projective_addition() {
 fn test_mixed_addition() {
     {
         let a = G2Affine::identity();
-        let b = G2Projective::identity();
+        let b = G2Projective::IDENTITY;
         let c = a + b;
         assert!(bool::from(c.is_identity()));
         assert!(bool::from(c.is_on_curve()));
     }
     {
         let a = G2Affine::identity();
-        let mut b = G2Projective::generator();
+        let mut b = G2Projective::GENERATOR;
         {
             let z = Fp2 {
                 c0: Fp::from_raw_unchecked([
@@ -1852,11 +1861,11 @@ fn test_mixed_addition() {
         let c = a + b;
         assert!(!bool::from(c.is_identity()));
         assert!(bool::from(c.is_on_curve()));
-        assert!(c == G2Projective::generator());
+        assert!(c == G2Projective::GENERATOR);
     }
     {
         let a = G2Affine::identity();
-        let mut b = G2Projective::generator();
+        let mut b = G2Projective::GENERATOR;
         {
             let z = Fp2 {
                 c0: Fp::from_raw_unchecked([
@@ -1886,14 +1895,14 @@ fn test_mixed_addition() {
         let c = b + a;
         assert!(!bool::from(c.is_identity()));
         assert!(bool::from(c.is_on_curve()));
-        assert!(c == G2Projective::generator());
+        assert!(c == G2Projective::GENERATOR);
     }
     {
-        let a = G2Projective::generator().double().double(); // 4P
-        let b = G2Projective::generator().double(); // 2P
+        let a = G2Projective::GENERATOR.double().double(); // 4P
+        let b = G2Projective::GENERATOR.double(); // 2P
         let c = a + b;
 
-        let mut d = G2Projective::generator();
+        let mut d = G2Projective::GENERATOR;
         for _ in 0..5 {
             d += G2Affine::generator();
         }
@@ -1918,7 +1927,7 @@ fn test_mixed_addition() {
             c1: Fp::ZERO,
         };
         let beta = beta.square();
-        let a = G2Projective::generator().double().double();
+        let a = G2Projective::GENERATOR.double().double();
         let b = G2Projective {
             x: a.x * beta,
             y: -a.y,
@@ -1979,21 +1988,21 @@ fn test_mixed_addition() {
 #[test]
 #[allow(clippy::eq_op)]
 fn test_projective_negation_and_subtraction() {
-    let a = G2Projective::generator().double();
-    assert_eq!(a + (-a), G2Projective::identity());
+    let a = G2Projective::GENERATOR.double();
+    assert_eq!(a + (-a), G2Projective::IDENTITY);
     assert_eq!(a + (-a), a - a);
 }
 
 #[test]
 fn test_affine_negation_and_subtraction() {
     let a = G2Affine::generator();
-    assert_eq!(G2Projective::from(a) + (-a), G2Projective::identity());
+    assert_eq!(G2Projective::from(a) + (-a), G2Projective::IDENTITY);
     assert_eq!(G2Projective::from(a) + (-a), G2Projective::from(a) - a);
 }
 
 #[test]
 fn test_projective_scalar_multiplication() {
-    let g = G2Projective::generator();
+    let g = G2Projective::GENERATOR;
     let a = Scalar::from_raw([
         0x2b56_8297_a56d_a71c,
         0xd8c3_9ecb_0ef3_75d1,
@@ -2082,7 +2091,7 @@ fn test_is_torsion_free() {
 fn test_mul_by_x() {
     // multiplying by `x` a point in G2 is the same as multiplying by
     // the equivalent scalar.
-    let generator = G2Projective::generator();
+    let generator = G2Projective::GENERATOR;
     let x = if crate::BLS_X_IS_NEGATIVE {
         -Scalar::from(crate::BLS_X)
     } else {
@@ -2090,13 +2099,13 @@ fn test_mul_by_x() {
     };
     assert_eq!(generator.mul_by_x(), generator * x);
 
-    let point = G2Projective::generator() * Scalar::from(42);
+    let point = G2Projective::GENERATOR * Scalar::from(42);
     assert_eq!(point.mul_by_x(), point * x);
 }
 
 #[test]
 fn test_psi() {
-    let generator = G2Projective::generator();
+    let generator = G2Projective::GENERATOR;
 
     let z = Fp2 {
         c0: Fp::from_raw_unchecked([
@@ -2244,9 +2253,9 @@ fn test_clear_cofactor() {
 
     // the generator (and the identity) are always on the curve,
     // even after clearing the cofactor
-    let generator = G2Projective::generator();
+    let generator = G2Projective::GENERATOR;
     assert!(bool::from(generator.clear_cofactor().is_on_curve()));
-    let id = G2Projective::identity();
+    let id = G2Projective::IDENTITY;
     assert!(bool::from(id.clear_cofactor().is_on_curve()));
 
     // test the effect on q-torsion points multiplying by h_eff modulo |Scalar|
@@ -2265,7 +2274,7 @@ fn test_clear_cofactor() {
 
 #[test]
 fn test_batch_normalize() {
-    let a = G2Projective::generator().double();
+    let a = G2Projective::GENERATOR.double();
     let b = a.double();
     let c = b.double();
 
@@ -2274,13 +2283,13 @@ fn test_batch_normalize() {
             for c_identity in (0..1).map(|n| n == 1) {
                 let mut v = [a, b, c];
                 if a_identity {
-                    v[0] = G2Projective::identity()
+                    v[0] = G2Projective::IDENTITY
                 }
                 if b_identity {
-                    v[1] = G2Projective::identity()
+                    v[1] = G2Projective::IDENTITY
                 }
                 if c_identity {
-                    v[2] = G2Projective::identity()
+                    v[2] = G2Projective::IDENTITY
                 }
 
                 let mut t = [
@@ -2311,7 +2320,7 @@ fn test_zeroize() {
     a.zeroize();
     assert!(bool::from(a.is_identity()));
 
-    let mut a = G2Projective::generator();
+    let mut a = G2Projective::GENERATOR;
     a.zeroize();
     assert!(bool::from(a.is_identity()));
 

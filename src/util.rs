@@ -227,8 +227,8 @@ macro_rules! impl_pippenger_sum_of_products {
             const MASK: u64 = (NUM_BUCKETS - 1) as u64;
 
             let num_components = core::cmp::min(points.len(), scalars.len());
-            let mut buckets = [Self::identity(); NUM_BUCKETS];
-            let mut res = Self::identity();
+            let mut buckets = [Self::IDENTITY; NUM_BUCKETS];
+            let mut res = Self::IDENTITY;
             let mut num_doubles = 0;
             let mut bit_sequence_index = 255usize; // point to top bit we need to process
 
@@ -295,9 +295,9 @@ macro_rules! impl_pippenger_sum_of_products {
                 for i in (1..max_bucket).rev() {
                     buckets[i] += buckets[i + 1];
                     res += buckets[i];
-                    buckets[i + 1] = Self::identity();
+                    buckets[i + 1] = Self::IDENTITY;
                 }
-                buckets[1] = Self::identity();
+                buckets[1] = Self::IDENTITY;
                 if bit_sequence_index < WINDOW {
                     break;
                 }
