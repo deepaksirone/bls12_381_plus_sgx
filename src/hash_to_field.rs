@@ -1,7 +1,7 @@
 use core::marker::PhantomData;
 use digest::{
     generic_array::{typenum::Unsigned, GenericArray},
-    BlockInput, Digest, ExtendableOutput, Update, XofReader,
+    Digest, ExtendableOutput, Update, XofReader,
 };
 
 /// Trait for types implementing expand_message interface for hash_to_field
@@ -42,7 +42,7 @@ where
 /// ExpandMsgXmd implements expand_message_xmd for the ExpandMsg trait
 impl<HashT> ExpandMsg for ExpandMsgXmd<HashT>
 where
-    HashT: Digest + BlockInput,
+    HashT: Digest + Update,
 {
     fn expand_message(msg: &[u8], dst: &[u8], buf: &mut [u8]) {
         let len_in_bytes = buf.len();
@@ -52,7 +52,7 @@ where
             panic!("ell was too big in expand_message_xmd");
         }
         let b_0 = HashT::new()
-            .chain(GenericArray::<u8, HashT::BlockSize>::default())
+            .chain(GenericArray::<u8, HashT::OutputSize>::default())
             .chain(msg)
             .chain([(len_in_bytes >> 8) as u8, len_in_bytes as u8, 0u8])
             .chain(dst)

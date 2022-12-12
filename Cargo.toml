@@ -39,7 +39,7 @@ harness = false
 required-features = ["experimental"]
 
 [dependencies.digest]
-version = "0.9"
+version = "0.10"
 optional = true
 
 [dependencies.ff]
