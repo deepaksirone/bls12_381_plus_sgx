@@ -9,7 +9,7 @@ use core::convert::TryFrom;
 use core::fmt;
 use core::iter::Sum;
 use core::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
-use group::Group;
+use group::{Group, GroupEncoding};
 use heapless::Vec;
 use pairing::{Engine, PairingCurveAffine};
 use rand_core::RngCore;
@@ -579,6 +579,44 @@ impl Group for Gt {
     #[must_use]
     fn double(&self) -> Self {
         self.double()
+    }
+}
+
+impl GroupEncoding for Gt {
+    type Repr = GtRepr;
+
+    fn from_bytes(bytes: &Self::Repr) -> CtOption<Self> {
+        Self::from_bytes(&bytes.0)
+    }
+
+    fn from_bytes_unchecked(bytes: &Self::Repr) -> CtOption<Self> {
+        Self::from_bytes(&bytes.0)
+    }
+
+    fn to_bytes(&self) -> Self::Repr {
+        GtRepr(self.to_bytes())
+    }
+}
+
+/// The representation of bytes for GT
+#[derive(Copy, Clone, Debug)]
+pub struct GtRepr([u8; Gt::BYTES]);
+
+impl Default for GtRepr {
+    fn default() -> Self {
+        Self([0u8; Gt::BYTES])
+    }
+}
+
+impl AsRef<[u8]> for GtRepr {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl AsMut<[u8]> for GtRepr {
+    fn as_mut(&mut self) -> &mut [u8] {
+        self.0.as_mut()
     }
 }
 
