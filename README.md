@@ -11,9 +11,9 @@ This crate provides an implementation of the BLS12-381 pairing-friendly elliptic
 
 * `bits` (on by default): Enables APIs for obtaining bit iterators for scalars.
 * `groups` (on by default): Enables APIs for performing group arithmetic with G1, G2, and GT.
-* `pairings` (on by default): Enables APIs for performing pairings.
+* `pairings` (on by default): Enables some APIs for performing pairings.
 * `hashing` (on by default): Enables hash to curve methods as defined by [IETF](https://datatracker.ietf.org/doc/draft-irtf-cfrg-hash-to-curve/?include_text=1).
-* `alloc` (on by default): Enables APIs that require an allocator.
+* `alloc` (on by default): Enables APIs that require an allocator; these include pairing optimizations.
 * `nightly`: Enables `subtle/nightly` which tries to prevent compiler optimizations that could jeopardize constant time operations. Requires the nightly Rust compiler.
 * `experimental`: Enables experimental features. These features have no backwards-compatibility guarantees and may change at any time; users that depend on specific behaviour should pin an exact version of this crate. The current list of experimental features:
   * Hashing to curves ([Internet Draft v12](https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-12))

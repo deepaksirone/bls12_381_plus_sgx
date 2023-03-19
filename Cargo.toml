@@ -42,17 +42,21 @@ required-features = ["experimental"]
 version = "0.10"
 optional = true
 
+[dependencies.elliptic-curve]
+version = "0.13"
+default-features = false
+
 [dependencies.ff]
-version = "0.12"
+version = "0.13"
 default-features = false
 
 [dependencies.group]
-version = "0.12"
+version = "0.13"
 default-features = false
 optional = true
 
 [dependencies.pairing]
-version = "0.22"
+version = "0.23"
 optional = true
 
 [dependencies.rand_core]
@@ -78,12 +82,16 @@ version = "0.7"
 [dependencies.hex]
 version = "0.4"
 
+[dependencies.arrayref]
+version = "0.3"
+optional = true
+
 [features]
 default = ["groups", "pairings", "alloc", "bits", "hashing"]
 bits = ["ff/bits"]
 expose-fields = ["groups"]
 groups = ["group"]
-hashing = ["digest"]
+hashing = ["digest", "elliptic-curve/hash2curve", "arrayref"]
 pairings = ["groups", "pairing"]
 alloc = ["group/alloc"]
 experimental = ["digest"]

@@ -475,15 +475,12 @@ impl G2Affine {
     /// exists within the $q$-order subgroup $\mathbb{G}_2$. This should always return true
     /// unless an "unchecked" API was used.
     pub fn is_torsion_free(&self) -> Choice {
-        const FQ_MODULUS_BYTES: [u8; 32] = [
-            1, 0, 0, 0, 255, 255, 255, 255, 254, 91, 254, 255, 2, 164, 189, 83, 5, 216, 161, 9, 8,
-            216, 57, 51, 72, 125, 157, 41, 83, 167, 237, 115,
-        ];
-
-        // Clear the r-torsion from the point and check if it is the identity
-        G2Projective::from(*self)
-            .multiply(&FQ_MODULUS_BYTES)
-            .is_identity()
+        // Algorithm from Section 4 of https://eprint.iacr.org/2021/1130
+        // Updated proof of correctness in https://eprint.iacr.org/2022/352
+        //
+        // Check that psi(P) == [x] P
+        let p = G2Projective::from(self);
+        p.psi().ct_eq(&p.mul_by_x())
     }
 
     /// Returns true if this point is on the curve. This should always return
@@ -626,6 +623,15 @@ impl<'a, 'b> Mul<&'b Scalar> for &'a G2Projective {
     }
 }
 
+impl<'a, 'b> Mul<&'b G2Projective> for &'a Scalar {
+    type Output = G2Projective;
+
+    #[inline]
+    fn mul(self, rhs: &'b G2Projective) -> Self::Output {
+        rhs * self
+    }
+}
+
 impl<'a, 'b> Mul<&'b Scalar> for &'a G2Affine {
     type Output = G2Projective;
 
@@ -634,9 +640,20 @@ impl<'a, 'b> Mul<&'b Scalar> for &'a G2Affine {
     }
 }
 
+impl<'a, 'b> Mul<&'b G2Affine> for &'a Scalar {
+    type Output = G2Projective;
+
+    #[inline]
+    fn mul(self, rhs: &'b G2Affine) -> Self::Output {
+        rhs * self
+    }
+}
+
 impl_binops_additive!(G2Projective, G2Projective);
 impl_binops_multiplicative!(G2Projective, Scalar);
 impl_binops_multiplicative_mixed!(G2Affine, Scalar, G2Projective);
+impl_binops_multiplicative_mixed!(Scalar, G2Affine, G2Projective);
+impl_binops_multiplicative_mixed!(Scalar, G2Projective, G2Projective);
 
 #[inline(always)]
 fn mul_by_3b(x: Fp2) -> Fp2 {
@@ -2278,9 +2295,9 @@ fn test_batch_normalize() {
     let b = a.double();
     let c = b.double();
 
-    for a_identity in (0..1).map(|n| n == 1) {
-        for b_identity in (0..1).map(|n| n == 1) {
-            for c_identity in (0..1).map(|n| n == 1) {
+    for a_identity in (0..=1).map(|n| n == 1) {
+        for b_identity in (0..=1).map(|n| n == 1) {
+            for c_identity in (0..=1).map(|n| n == 1) {
                 let mut v = [a, b, c];
                 if a_identity {
                     v[0] = G2Projective::IDENTITY
@@ -2331,6 +2348,33 @@ fn test_zeroize() {
     let mut a = UncompressedEncoding::to_uncompressed(&G2Affine::generator());
     a.zeroize();
     assert_eq!(&a, &G2Uncompressed::default());
+}
+
+#[test]
+fn test_commutative_scalar_subgroup_multiplication() {
+    let a = Scalar::from_raw([
+        0x1fff_3231_233f_fffd,
+        0x4884_b7fa_0003_4802,
+        0x998c_4fef_ecbc_4ff3,
+        0x1824_b159_acc5_0562,
+    ]);
+
+    let g2_a = G2Affine::generator();
+    let g2_p = G2Projective::generator();
+
+    // By reference.
+    assert_eq!(&g2_a * &a, &a * &g2_a);
+    assert_eq!(&g2_p * &a, &a * &g2_p);
+
+    // Mixed
+    assert_eq!(&g2_a * a.clone(), a.clone() * &g2_a);
+    assert_eq!(&g2_p * a.clone(), a.clone() * &g2_p);
+    assert_eq!(g2_a.clone() * &a, &a * g2_a.clone());
+    assert_eq!(g2_p.clone() * &a, &a * g2_p.clone());
+
+    // By value.
+    assert_eq!(g2_p * a, a * g2_p);
+    assert_eq!(g2_a * a, a * g2_a);
 }
 
 #[cfg(feature = "hashing")]

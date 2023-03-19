@@ -401,15 +401,14 @@ impl G1Affine {
     /// exists within the $q$-order subgroup $\mathbb{G}_1$. This should always return true
     /// unless an "unchecked" API was used.
     pub fn is_torsion_free(&self) -> Choice {
-        const FQ_MODULUS_BYTES: [u8; 32] = [
-            1, 0, 0, 0, 255, 255, 255, 255, 254, 91, 254, 255, 2, 164, 189, 83, 5, 216, 161, 9, 8,
-            216, 57, 51, 72, 125, 157, 41, 83, 167, 237, 115,
-        ];
+        // Algorithm from Section 6 of https://eprint.iacr.org/2021/1130
+        // Updated proof of correctness in https://eprint.iacr.org/2022/352
+        //
+        // Check that endomorphism_p(P) == -[x^2] P
 
-        // Clear the r-torsion from the point and check if it is the identity
-        G1Projective::from(*self)
-            .multiply(&FQ_MODULUS_BYTES)
-            .is_identity()
+        let minus_x_squared_times_p = G1Projective::from(self).mul_by_x().mul_by_x().neg();
+        let endomorphism_p = endomorphism(self);
+        minus_x_squared_times_p.ct_eq(&G1Projective::from(endomorphism_p))
     }
 
     /// Returns true if this point is on the curve. This should always return
@@ -418,6 +417,25 @@ impl G1Affine {
         // y^2 - x^3 ?= 4
         (self.y.square() - (self.x.square() * self.x)).ct_eq(&B) | self.infinity
     }
+}
+
+/// A nontrivial third root of unity in Fp
+pub const BETA: Fp = Fp::from_raw_unchecked([
+    0x30f1_361b_798a_64e8,
+    0xf3b8_ddab_7ece_5a2a,
+    0x16a8_ca3a_c615_77f7,
+    0xc26a_2ff8_74fd_029b,
+    0x3636_b766_6070_1c6e,
+    0x051b_a4ab_241b_6160,
+]);
+
+fn endomorphism(p: &G1Affine) -> G1Affine {
+    // Endomorphism of the points on the curve.
+    // endomorphism_p(x,y) = (BETA * x, y)
+    // where BETA is a non-trivial cubic root of unity in Fq.
+    let mut res = *p;
+    res.x *= BETA;
+    res
 }
 
 impl_serde!(
@@ -552,6 +570,15 @@ impl<'a, 'b> Mul<&'b Scalar> for &'a G1Projective {
     }
 }
 
+impl<'a, 'b> Mul<&'b G1Projective> for &'a Scalar {
+    type Output = G1Projective;
+
+    #[inline]
+    fn mul(self, rhs: &'b G1Projective) -> Self::Output {
+        rhs * self
+    }
+}
+
 impl<'a, 'b> Mul<&'b Scalar> for &'a G1Affine {
     type Output = G1Projective;
 
@@ -560,9 +587,20 @@ impl<'a, 'b> Mul<&'b Scalar> for &'a G1Affine {
     }
 }
 
+impl<'a, 'b> Mul<&'b G1Affine> for &'a Scalar {
+    type Output = G1Projective;
+
+    #[inline]
+    fn mul(self, rhs: &'b G1Affine) -> Self::Output {
+        rhs * self
+    }
+}
+
 impl_binops_additive!(G1Projective, G1Projective);
 impl_binops_multiplicative!(G1Projective, Scalar);
 impl_binops_multiplicative_mixed!(G1Affine, Scalar, G1Projective);
+impl_binops_multiplicative_mixed!(Scalar, G1Affine, G1Projective);
+impl_binops_multiplicative_mixed!(Scalar, G1Projective, G1Projective);
 
 impl serde::Serialize for G1Projective {
     fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
@@ -582,12 +620,27 @@ impl<'de> serde::Deserialize<'de> for G1Projective {
     }
 }
 
+impl group::cofactor::CofactorGroup for G1Projective {
+    type Subgroup = G1Projective;
+
+    fn clear_cofactor(&self) -> Self::Subgroup {
+        self.clear_cofactor()
+    }
+
+    fn into_subgroup(self) -> CtOption<Self::Subgroup> {
+        CtOption::new(self, 1.into())
+    }
+
+    fn is_torsion_free(&self) -> Choice {
+        self.is_on_curve()
+    }
+}
+
 #[inline(always)]
 fn mul_by_3b(a: Fp) -> Fp {
     let a = a + a; // 2
     let a = a + a; // 4
-    let a = a + a + a; // 12
-    a
+    a + a + a // 12
 }
 
 impl G1Projective {
@@ -1236,6 +1289,22 @@ impl UncompressedEncoding for G1Affine {
 }
 
 #[test]
+fn test_beta() {
+    assert_eq!(
+        BETA,
+        Fp::from_bytes(&[
+            0x00u8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x5f, 0x19, 0x67, 0x2f, 0xdf, 0x76,
+            0xce, 0x51, 0xba, 0x69, 0xc6, 0x07, 0x6a, 0x0f, 0x77, 0xea, 0xdd, 0xb3, 0xa9, 0x3b,
+            0xe6, 0xf8, 0x96, 0x88, 0xde, 0x17, 0xd8, 0x13, 0x62, 0x0a, 0x00, 0x02, 0x2e, 0x01,
+            0xff, 0xff, 0xff, 0xfe, 0xff, 0xfe
+        ])
+        .unwrap()
+    );
+    assert_ne!(BETA, Fp::one());
+    assert_ne!(BETA * BETA, Fp::one());
+    assert_eq!(BETA * BETA * BETA, Fp::one());
+}
+#[test]
 fn test_is_on_curve() {
     assert!(bool::from(G1Affine::identity().is_on_curve()));
     assert!(bool::from(G1Affine::generator().is_on_curve()));
@@ -1821,9 +1890,9 @@ fn test_batch_normalize() {
     let b = a.double();
     let c = b.double();
 
-    for a_identity in (0..1).map(|n| n == 1) {
-        for b_identity in (0..1).map(|n| n == 1) {
-            for c_identity in (0..1).map(|n| n == 1) {
+    for a_identity in (0..=1).map(|n| n == 1) {
+        for b_identity in (0..=1).map(|n| n == 1) {
+            for c_identity in (0..=1).map(|n| n == 1) {
                 let mut v = [a, b, c];
                 if a_identity {
                     v[0] = G1Projective::IDENTITY
@@ -1874,6 +1943,33 @@ fn test_zeroize() {
     let mut a = UncompressedEncoding::to_uncompressed(&G1Affine::generator());
     a.zeroize();
     assert_eq!(&a, &G1Uncompressed::default());
+}
+
+#[test]
+fn test_commutative_scalar_subgroup_multiplication() {
+    let a = Scalar::from_raw([
+        0x1fff_3231_233f_fffd,
+        0x4884_b7fa_0003_4802,
+        0x998c_4fef_ecbc_4ff3,
+        0x1824_b159_acc5_0562,
+    ]);
+
+    let g1_a = G1Affine::generator();
+    let g1_p = G1Projective::generator();
+
+    // By reference.
+    assert_eq!(&g1_a * &a, &a * &g1_a);
+    assert_eq!(&g1_p * &a, &a * &g1_p);
+
+    // Mixed
+    assert_eq!(&g1_a * a.clone(), a.clone() * &g1_a);
+    assert_eq!(&g1_p * a.clone(), a.clone() * &g1_p);
+    assert_eq!(g1_a.clone() * &a, &a * g1_a.clone());
+    assert_eq!(g1_p.clone() * &a, &a * g1_p.clone());
+
+    // By value.
+    assert_eq!(g1_p * a, a * g1_p);
+    assert_eq!(g1_a * a, a * g1_a);
 }
 
 #[test]

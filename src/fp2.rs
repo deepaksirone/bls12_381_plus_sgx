@@ -229,32 +229,23 @@ impl Fp2 {
         }
     }
 
-    /// Karatsuba multiplication self * rhs
-    pub const fn mul(&self, rhs: &Fp2) -> Fp2 {
-        // Karatsuba multiplication:
+    pub fn mul(&self, rhs: &Fp2) -> Fp2 {
+        // F_{p^2} x F_{p^2} multiplication implemented with operand scanning (schoolbook)
+        // computes the result as:
         //
-        // v0  = a0 * b0
-        // v1  = a1 * b1
-        // c0 = v0 + \beta * v1
-        // c1 = (a0 + a1) * (b0 + b1) - v0 - v1
+        //   a·b = (a_0 b_0 + a_1 b_1 β) + (a_0 b_1 + a_1 b_0)i
         //
-        // In BLS12-381's F_{p^2}, our \beta is -1 so we
-        // can modify this formula. (Also, since we always
-        // subtract v1, we can compute v1 = -a1 * b1.)
+        // In BLS12-381's F_{p^2}, our β is -1, so the resulting F_{p^2} element is:
         //
-        // v0  = a0 * b0
-        // v1  = (-a1) * b1
-        // c0 = v0 + v1
-        // c1 = (a0 + a1) * (b0 + b1) - v0 + v1
+        //   c_0 = a_0 b_0 - a_1 b_1
+        //   c_1 = a_0 b_1 + a_1 b_0
+        //
+        // Each of these is a "sum of products", which we can compute efficiently.
 
-        let v0 = (&self.c0).mul(&rhs.c0);
-        let v1 = (&(&self.c1).neg()).mul(&rhs.c1);
-        let c0 = (&v0).add(&v1);
-        let c1 = (&(&self.c0).add(&self.c1)).mul(&(&rhs.c0).add(&rhs.c1));
-        let c1 = (&c1).sub(&v0);
-        let c1 = (&c1).add(&v1);
-
-        Fp2 { c0, c1 }
+        Fp2 {
+            c0: Fp::sum_of_products([self.c0, -self.c1], [rhs.c0, rhs.c1]),
+            c1: Fp::sum_of_products([self.c0, self.c1], [rhs.c1, rhs.c0]),
+        }
     }
 
     /// Add self + rhs
@@ -369,7 +360,7 @@ impl Fp2 {
     /// Although this is labeled "vartime", it is only
     /// variable time with respect to the exponent. It
     /// is also not exposed in the public API.
-    pub(crate) fn pow_vartime(&self, by: &[u64; 6]) -> Self {
+    pub fn pow_vartime(&self, by: &[u64; 6]) -> Self {
         let mut res = Self::ONE;
         for e in by.iter().rev() {
             for i in (0..64).rev() {
@@ -383,6 +374,23 @@ impl Fp2 {
         res
     }
 
+    /// Vartime exponentiation for larger exponents, only
+    /// used in testing and not exposed through the public API.
+    #[cfg(all(test, feature = "experimental"))]
+    pub(crate) fn pow_vartime_extended(&self, by: &[u64]) -> Self {
+        let mut res = Self::one();
+        for e in by.iter().rev() {
+            for i in (0..64).rev() {
+                res = res.square();
+
+                if ((*e >> i) & 1) == 1 {
+                    res *= self;
+                }
+            }
+        }
+        res
+    }
+    
     #[cfg(feature = "hashing")]
     #[inline]
     pub(crate) fn sgn0(&self) -> Sgn0Result {
