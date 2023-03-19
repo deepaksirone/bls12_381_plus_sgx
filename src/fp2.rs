@@ -7,11 +7,9 @@ use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
 use crate::fp::Fp;
 #[cfg(feature = "hashing")]
-use crate::hash_to_field::ExpandMsg;
-#[cfg(feature = "hashing")]
-use crate::signum::Sgn0Result;
-#[cfg(feature = "hashing")]
 use core::convert::TryFrom;
+#[cfg(feature = "hashing")]
+use elliptic_curve::hash2curve::{ExpandMsg, Expander, Sgn0};
 
 /// A point in the multiplicative group of order p^2
 #[derive(Copy, Clone)]
@@ -116,6 +114,17 @@ impl<'a, 'b> Mul<&'b Fp2> for &'a Fp2 {
 
 impl_binops_additive!(Fp2, Fp2);
 impl_binops_multiplicative!(Fp2, Fp2);
+
+#[cfg(feature = "hashing")]
+impl Sgn0 for Fp2 {
+    fn sgn0(&self) -> Choice {
+        if self.c0.is_zero().into() {
+            self.c1.sgn0()
+        } else {
+            self.c0.sgn0()
+        }
+    }
+}
 
 impl Fp2 {
     /// The additive identity element
@@ -378,7 +387,7 @@ impl Fp2 {
     /// used in testing and not exposed through the public API.
     #[cfg(all(test, feature = "experimental"))]
     pub(crate) fn pow_vartime_extended(&self, by: &[u64]) -> Self {
-        let mut res = Self::one();
+        let mut res = Self::ONE;
         for e in by.iter().rev() {
             for i in (0..64).rev() {
                 res = res.square();
@@ -390,16 +399,16 @@ impl Fp2 {
         }
         res
     }
-    
-    #[cfg(feature = "hashing")]
-    #[inline]
-    pub(crate) fn sgn0(&self) -> Sgn0Result {
-        if self.c0.is_zero().unwrap_u8() == 1 {
-            self.c1.sgn0()
-        } else {
-            self.c0.sgn0()
-        }
-    }
+
+    // #[cfg(feature = "hashing")]
+    // #[inline]
+    // pub(crate) fn sgn0(&self) -> Sgn0Result {
+    //     if self.c0.is_zero().unwrap_u8() == 1 {
+    //         self.c1.sgn0()
+    //     } else {
+    //         self.c0.sgn0()
+    //     }
+    // }
 
     #[cfg(feature = "hashing")]
     /// Take 64 bytes and compute the result reduced by the field modulus
@@ -413,10 +422,12 @@ impl Fp2 {
     #[cfg(feature = "hashing")]
     pub(crate) fn hash<X>(msg: &[u8], dst: &[u8]) -> [Fp2; 2]
     where
-        X: ExpandMsg,
+        X: for<'a> ExpandMsg<'a>,
     {
+        let dst = [dst];
         let mut random_bytes = [0u8; 256];
-        X::expand_message(msg, dst, &mut random_bytes);
+        let mut expander = X::expand_message(&[msg], &dst, random_bytes.len()).unwrap();
+        expander.fill_bytes(&mut random_bytes);
         [
             Fp2::from_random_bytes(<[u8; 128]>::try_from(&random_bytes[..128]).unwrap()),
             Fp2::from_random_bytes(<[u8; 128]>::try_from(&random_bytes[128..]).unwrap()),
@@ -426,10 +437,12 @@ impl Fp2 {
     #[cfg(feature = "hashing")]
     pub(crate) fn encode<X>(msg: &[u8], dst: &[u8]) -> Fp2
     where
-        X: ExpandMsg,
+        X: for<'a> ExpandMsg<'a>,
     {
+        let dst = [dst];
         let mut random_bytes = [0u8; 128];
-        X::expand_message(msg, dst, &mut random_bytes);
+        let mut expander = X::expand_message(&[msg], &dst, random_bytes.len()).unwrap();
+        expander.fill_bytes(&mut random_bytes);
         Fp2::from_random_bytes(random_bytes)
     }
 }

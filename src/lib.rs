@@ -30,6 +30,11 @@ extern crate alloc;
 #[macro_use]
 extern crate std;
 
+pub use elliptic_curve;
+pub use ff;
+#[cfg(feature = "groups")]
+pub use group;
+
 #[cfg(test)]
 #[cfg(feature = "groups")]
 mod tests;
@@ -46,6 +51,7 @@ pub mod notes {
 
 mod scalar;
 
+use elliptic_curve::{Curve, CurveArithmetic};
 pub use scalar::Scalar;
 
 #[cfg(all(feature = "groups", not(feature = "expose-fields")))]
@@ -73,7 +79,34 @@ pub use g2::{G2Compressed, G2Uncompressed};
 mod fp12;
 mod fp6;
 
-// The BLS parameter x for BLS12-381 is -0xd201000000010000
+// /// An engine for operations generic G1 operations
+// #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd)]
+// pub struct Bls12381G1;
+//
+// /// An engine for operations generic G2 operations
+// #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd)]
+// pub struct Bls12381G2;
+//
+// impl CurveArithmetic for Bls12381G1 {
+//     type AffinePoint = G1Affine;
+//     type ProjectivePoint = G1Projective;
+//     type Scalar = Scalar;
+// }
+
+// impl Curve for Bls12381G1 {
+//     type FieldBytesSize = elliptic_curve::generic_array::typenum::U48;
+//     type Uint = elliptic_curve::bigint::U384;
+//     const ORDER: Self::Uint = elliptic_curve::bigint::U384::from_be_hex(
+//         "1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab"
+//     );
+// }
+
+// #[cfg(feature = "hashing")]
+// impl elliptic_curve::hash2curve::GroupDigest for Bls12381G1 {
+//     type FieldElement = fp::Fp;
+// }
+
+/// The BLS parameter x for BLS12-381 is -0xd201000000010000
 #[cfg(feature = "groups")]
 const BLS_X: u64 = 0xd201_0000_0001_0000;
 #[cfg(feature = "groups")]
@@ -85,15 +118,8 @@ mod pairings;
 #[cfg(feature = "pairings")]
 pub use pairings::{pairing, Bls12, Gt, MillerLoopResult};
 
-#[cfg(all(feature = "pairings", feature = "alloc"))]
+#[cfg(feature = "pairings")]
 pub use pairings::{multi_miller_loop, G2Prepared};
 
 #[cfg(feature = "hashing")]
-mod hash_to_field;
-#[cfg(feature = "hashing")]
 mod isogeny;
-#[cfg(feature = "hashing")]
-mod signum;
-
-#[cfg(feature = "hashing")]
-pub use hash_to_field::*;

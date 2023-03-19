@@ -16,9 +16,9 @@ use group::WnafGroup;
 
 use crate::fp::Fp;
 use crate::fp2::Fp2;
-#[cfg(feature = "hashing")]
-use crate::hash_to_field::ExpandMsg;
 use crate::Scalar;
+#[cfg(feature = "hashing")]
+use elliptic_curve::hash2curve::{ExpandMsg, Sgn0};
 
 /// This is an element of $\mathbb{G}_2$ represented in the affine coordinate space.
 /// It is ideal to keep elements in this representation to reduce memory usage and
@@ -1018,10 +1018,9 @@ impl G2Projective {
 
     #[cfg(feature = "hashing")]
     /// Use a random oracle to map a value to a curve point
-    /// TODO: Make public once it works
     pub fn hash<X>(msg: &[u8], dst: &[u8]) -> Self
     where
-        X: ExpandMsg,
+        X: for<'a> ExpandMsg<'a>,
     {
         {
             let u = Fp2::hash::<X>(msg, dst);
@@ -1036,7 +1035,7 @@ impl G2Projective {
     /// Use injective encoding to map a value to a curve point
     pub fn encode<X>(msg: &[u8], dst: &[u8]) -> Self
     where
-        X: ExpandMsg,
+        X: for<'a> ExpandMsg<'a>,
     {
         let u = Fp2::encode::<X>(msg, dst);
         Self::sswu_map(&u).isogeny_map().clear_cofactor()
@@ -1144,7 +1143,7 @@ impl G2Projective {
         let y2 = Fp2::conditional_select(&gx2, &gx1, e2.is_some());
         let mut y = y2.sqrt().unwrap();
         let e9 = u.sgn0() ^ y.sgn0();
-        y.conditional_negate(Choice::from(e9.as_u8()));
+        y.conditional_negate(e9);
         Self { x, y, z: Fp2::ONE }
     }
 
@@ -2360,7 +2359,7 @@ fn test_commutative_scalar_subgroup_multiplication() {
     ]);
 
     let g2_a = G2Affine::generator();
-    let g2_p = G2Projective::generator();
+    let g2_p = G2Projective::GENERATOR;
 
     // By reference.
     assert_eq!(&g2_a * &a, &a * &g2_a);
@@ -2381,7 +2380,7 @@ fn test_commutative_scalar_subgroup_multiplication() {
 #[ignore]
 #[test]
 fn test_hash() {
-    use crate::hash_to_field::ExpandMsgXmd;
+    use elliptic_curve::hash2curve::ExpandMsgXmd;
     use std::convert::TryFrom;
     const DST: &'static [u8] = b"QUUX-V01-CS02-with-BLS12381G2_XMD:SHA-256_SSWU_RO_";
 

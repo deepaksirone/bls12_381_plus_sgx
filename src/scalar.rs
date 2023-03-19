@@ -716,7 +716,7 @@ impl Field for Scalar {
         // (t - 1) // 2 = 6104339283789297388802252303364915521546564123189034618274734669823
         ff::helpers::sqrt_tonelli_shanks(
             self,
-            &[
+            [
                 0x7fff_2dff_7fff_ffff,
                 0x04d0_ec02_a9de_d201,
                 0x94ce_bea4_199c_ec04,
@@ -1338,7 +1338,7 @@ fn test_zeroize() {
 
 #[test]
 fn test_serialization() {
-    let s1 = Scalar::multiplicative_generator();
+    let s1 = GENERATOR;
 
     let vec = serde_bare::to_vec(&s1).unwrap();
     let s2: Scalar = serde_bare::from_slice(&vec).unwrap();

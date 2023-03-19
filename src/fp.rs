@@ -3,14 +3,19 @@
 
 use core::convert::TryFrom;
 use core::fmt;
+use core::iter::{Iterator, Product, Sum};
 use core::ops::{Add, AddAssign, BitOr, Mul, MulAssign, Neg, Sub, SubAssign};
+use digest::generic_array::GenericArray;
+#[cfg(feature = "hashing")]
+use elliptic_curve::hash2curve::{ExpandMsg, Expander, Sgn0};
+use ff::{Field, PrimeField};
 use rand_core::RngCore;
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
-#[cfg(feature = "hashing")]
-use crate::hash_to_field::ExpandMsg;
-#[cfg(feature = "hashing")]
-use crate::signum::Sgn0Result;
+// #[cfg(feature = "hashing")]
+// use crate::hash_to_field::ExpandMsg;
+// #[cfg(feature = "hashing")]
+// use crate::signum::Sgn0Result;
 use crate::util::{adc, mac, sbb};
 
 /// The internal representation of this type is six 64-bit unsigned
@@ -161,6 +166,177 @@ impl<'a, 'b> Mul<&'b Fp> for &'a Fp {
 
 impl_binops_additive!(Fp, Fp);
 impl_binops_multiplicative!(Fp, Fp);
+
+#[cfg(feature = "hashing")]
+impl elliptic_curve::hash2curve::FromOkm for Fp {
+    type Length = elliptic_curve::generic_array::typenum::U64;
+
+    fn from_okm(data: &GenericArray<u8, Self::Length>) -> Self {
+        let input = arrayref::array_ref![data, 0, 64];
+        Self::from_random_bytes(*input)
+    }
+}
+
+#[cfg(feature = "hashing")]
+impl Sgn0 for Fp {
+    fn sgn0(&self) -> Choice {
+        let bytes = self.to_bytes();
+        (bytes[47] & 1).into()
+    }
+}
+
+// #[cfg(feature = "hashing")]
+// impl elliptic_curve::hash2curve::OsswuMap for Fp {
+//     const PARAMS: elliptic_curve::hash2curve::OsswuMapParams<Self> = elliptic_curve::hash2curve::OsswuMapParams {
+//         c1: &[
+//             0xee7f_bfff_ffff_eaaau64,
+//             0x07aa_ffff_ac54_ffffu64,
+//             0xd9cc_34a8_3dac_3d89u64,
+//             0xd91d_d2e1_3ce1_44afu64,
+//             0x92c6_e9ed_90d2_eb35u64,
+//             0x0680_447a_8e5f_f9a6u64,
+//         ],
+//         c2: Fp([
+//             0x43b5_71ca_d321_5f1fu64,
+//             0xccb4_60ef_1c70_2dc2u64,
+//             0x742d_884f_4f97_100bu64,
+//             0xdb2c_3e32_38a3_382bu64,
+//             0xe40f_3fa1_3fce_8f88u64,
+//             0x0073_a2af_9892_a2ffu64,
+//         ]),
+//         map_a: Fp([
+//             0x2f65_aa0e_9af5_aa51u64,
+//             0x8646_4c2d_1e84_16c3u64,
+//             0xb85c_e591_b7bd_31e2u64,
+//             0x27e1_1c91_b5f2_4e7cu64,
+//             0x2837_6eda_6bfc_1835u64,
+//             0x1554_55c3_e507_1d85u64,
+//         ]),
+//         map_b: Fp([
+//             0xfb99_6971_fe22_a1e0u64,
+//             0x9aa9_3eb3_5b74_2d6fu64,
+//             0x8c47_6013_de99_c5c4u64,
+//             0x873e_27c3_a221_e571u64,
+//             0xca72_b5e4_5a52_d888u64,
+//             0x0682_4061_418a_386bu64,
+//         ]),
+//         z: Fp([
+//             0x886c00000023ffdcu64,
+//             0xf70008d3090001du64,
+//             0x77672417ed5828c3u64,
+//             0x9dac23e943dc1740u64,
+//             0x50553f1b9c131521u64,
+//             0x78c712fbe0ab6e8u64,
+//         ]),
+//     };
+// }
+//
+// impl Field for Fp {
+//     const ZERO: Self = Fp::ZERO;
+//     const ONE: Self = Fp::ONE;
+//
+//     fn random(rng: impl RngCore) -> Self {
+//         Fp::random(rng)
+//     }
+//
+//     fn square(&self) -> Self {
+//         self.square()
+//     }
+//
+//     fn double(&self) -> Self {
+//         self.double()
+//     }
+//
+//     fn invert(&self) -> CtOption<Self> {
+//         self.invert()
+//     }
+//
+//     fn sqrt_ratio(num: &Self, div: &Self) -> (Choice, Self) {
+//         // ff::helpers::sqrt_ratio_generic(num, div)
+//         unimplemented!()
+//     }
+// }
+//
+// impl PrimeField for Fp {
+//     type Repr = [u64; 6];
+//
+//     fn from_repr(repr: Self::Repr) -> CtOption<Self> {
+//         CtOption::new(Fp([
+//             repr[0],
+//             repr[1],
+//             repr[2],
+//             repr[3],
+//             repr[4],
+//             repr[5],
+//         ]) * R2, 1.into())
+//     }
+//
+//     fn to_repr(&self) -> Self::Repr {
+//         Self::montgomery_reduce(
+//             self.0[0], self.0[1], self.0[2], self.0[3], self.0[4], self.0[5], 0, 0, 0, 0, 0, 0,
+//         ).0
+//     }
+//
+//     fn is_odd(&self) -> Choice {
+//         <Self as Sgn0>::sgn0(self)
+//     }
+//
+//     const MODULUS: &'static str = "";
+//     const NUM_BITS: u32 = 0;
+//     const CAPACITY: u32 = 0;
+//     const TWO_INV: Self = ();
+//     const MULTIPLICATIVE_GENERATOR: Self = ();
+//     const S: u32 = 48;
+//     const ROOT_OF_UNITY: Self = ();
+//     const ROOT_OF_UNITY_INV: Self = ();
+//     const DELTA: Self = ();
+// }
+//
+impl From<u64> for Fp {
+    fn from(value: u64) -> Self {
+        Self([value, 0, 0, 0, 0, 0]) * R2
+    }
+}
+
+impl Sum<Fp> for Fp {
+    fn sum<I: Iterator<Item = Fp>>(iter: I) -> Self {
+        let mut result = Fp::ZERO;
+        for f in iter {
+            result += f;
+        }
+        result
+    }
+}
+
+impl<'a> Sum<&'a Fp> for Fp {
+    fn sum<I: Iterator<Item = &'a Fp>>(iter: I) -> Self {
+        let mut result = Fp::ZERO;
+        for f in iter {
+            result += f;
+        }
+        result
+    }
+}
+
+impl Product<Fp> for Fp {
+    fn product<I: Iterator<Item = Fp>>(iter: I) -> Self {
+        let mut result = Fp::ONE;
+        for f in iter {
+            result *= f;
+        }
+        result
+    }
+}
+
+impl<'a> Product<&'a Fp> for Fp {
+    fn product<I: Iterator<Item = &'a Fp>>(iter: I) -> Self {
+        let mut result = Fp::ONE;
+        for f in iter {
+            result *= f;
+        }
+        result
+    }
+}
 
 impl Fp {
     /// The additive identity.
@@ -701,16 +877,16 @@ impl Fp {
         res.is_zero().bitor(res.ct_eq(&Self::ONE))
     }
 
-    #[cfg(feature = "hashing")]
-    #[inline]
-    pub(crate) fn sgn0(&self) -> Sgn0Result {
-        let bytes = self.to_bytes();
-        if bytes[47] & 1 == 1 {
-            Sgn0Result::Negative
-        } else {
-            Sgn0Result::NonNegative
-        }
-    }
+    // #[cfg(feature = "hashing")]
+    // #[inline]
+    // pub(crate) fn sgn0(&self) -> Sgn0Result {
+    //     let bytes = self.to_bytes();
+    //     if bytes[47] & 1 == 1 {
+    //         Sgn0Result::Negative
+    //     } else {
+    //         Sgn0Result::NonNegative
+    //     }
+    // }
 
     #[cfg(feature = "hashing")]
     /// Take 64 bytes and compute the result reduced by the field modulus
@@ -734,10 +910,12 @@ impl Fp {
     #[cfg(feature = "hashing")]
     pub(crate) fn hash<X>(msg: &[u8], dst: &[u8]) -> [Fp; 2]
     where
-        X: ExpandMsg,
+        X: for<'a> ExpandMsg<'a>,
     {
+        let dst = [dst];
         let mut random_bytes = [0u8; 128];
-        X::expand_message(msg, dst, &mut random_bytes);
+        let mut expander = X::expand_message(&[msg], &dst, random_bytes.len()).unwrap();
+        expander.fill_bytes(&mut random_bytes);
         [
             Fp::from_random_bytes(<[u8; 64]>::try_from(&random_bytes[..64]).unwrap()),
             Fp::from_random_bytes(<[u8; 64]>::try_from(&random_bytes[64..]).unwrap()),
@@ -747,10 +925,12 @@ impl Fp {
     #[cfg(feature = "hashing")]
     pub(crate) fn encode<X>(msg: &[u8], dst: &[u8]) -> Fp
     where
-        X: ExpandMsg,
+        X: for<'a> ExpandMsg<'a>,
     {
+        let dst = [dst];
         let mut random_bytes = [0u8; 64];
-        X::expand_message(msg, dst, &mut random_bytes);
+        let mut expander = X::expand_message(&[msg], &dst, random_bytes.len()).unwrap();
+        expander.fill_bytes(&mut random_bytes);
         Fp::from_random_bytes(random_bytes)
     }
 }

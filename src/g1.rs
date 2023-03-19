@@ -15,9 +15,9 @@ use subtle::{Choice, ConditionallyNegatable, ConditionallySelectable, ConstantTi
 use group::WnafGroup;
 
 use crate::fp::Fp;
-#[cfg(feature = "hashing")]
-use crate::hash_to_field::ExpandMsg;
 use crate::Scalar;
+#[cfg(feature = "hashing")]
+use elliptic_curve::hash2curve::{ExpandMsg, Sgn0};
 
 /// This is an element of $\mathbb{G}_1$ represented in the affine coordinate space.
 /// It is ideal to keep elements in this representation to reduce memory usage and
@@ -909,7 +909,7 @@ impl G1Projective {
     /// Use a random oracle to map a value to a curve point
     pub fn hash<X>(msg: &[u8], dst: &[u8]) -> Self
     where
-        X: ExpandMsg,
+        X: for<'a> ExpandMsg<'a>,
     {
         {
             let u = Fp::hash::<X>(msg, dst);
@@ -922,7 +922,7 @@ impl G1Projective {
     /// Use injective encoding to map a value to a curve point
     pub fn encode<X>(msg: &[u8], dst: &[u8]) -> Self
     where
-        X: ExpandMsg,
+        X: for<'a> ExpandMsg<'a>,
     {
         let u = Fp::encode::<X>(msg, dst);
         Self::osswu_map(&u).isogeny_map().clear_cofactor()
@@ -1039,7 +1039,7 @@ impl G1Projective {
         y2.conditional_assign(&y1, e2);
 
         let e3 = u.sgn0() ^ y2.sgn0();
-        y2.conditional_negate(Choice::from(e3.as_u8()));
+        y2.conditional_negate(e3);
 
         Self {
             x: x2n * xd.invert().unwrap(),
@@ -1300,9 +1300,9 @@ fn test_beta() {
         ])
         .unwrap()
     );
-    assert_ne!(BETA, Fp::one());
-    assert_ne!(BETA * BETA, Fp::one());
-    assert_eq!(BETA * BETA * BETA, Fp::one());
+    assert_ne!(BETA, Fp::ONE);
+    assert_ne!(BETA * BETA, Fp::ONE);
+    assert_eq!(BETA * BETA * BETA, Fp::ONE);
 }
 #[test]
 fn test_is_on_curve() {
@@ -1955,7 +1955,7 @@ fn test_commutative_scalar_subgroup_multiplication() {
     ]);
 
     let g1_a = G1Affine::generator();
-    let g1_p = G1Projective::generator();
+    let g1_p = G1Projective::GENERATOR;
 
     // By reference.
     assert_eq!(&g1_a * &a, &a * &g1_a);
@@ -2048,7 +2048,7 @@ fn test_sum_of_products_alloc() {
 #[cfg(feature = "hashing")]
 #[test]
 fn test_hash() {
-    use crate::hash_to_field::ExpandMsgXmd;
+    use elliptic_curve::hash2curve::ExpandMsgXmd;
     use std::convert::TryFrom;
     const DST: &'static [u8] = b"QUUX-V01-CS02-with-BLS12381G1_XMD:SHA-256_SSWU_RO_";
 
