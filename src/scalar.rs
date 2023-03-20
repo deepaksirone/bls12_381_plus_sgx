@@ -77,12 +77,6 @@ impl ConditionallySelectable for Scalar {
 
 impl zeroize::DefaultIsZeroes for Scalar {}
 
-impl zeroize::Zeroize for Scalar {
-    fn zeroize(&mut self) {
-        self.0.zeroize()
-    }
-}
-
 /// Constant representing the modulus
 /// q = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
 const MODULUS: Scalar = Scalar([

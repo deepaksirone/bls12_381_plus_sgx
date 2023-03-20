@@ -1241,7 +1241,7 @@ fn test_lexicographic_largest() {
 fn test_zeroize() {
     use zeroize::Zeroize;
 
-    let mut a = Fp::one();
+    let mut a = Fp::ONE;
     a.zeroize();
     assert!(bool::from(a.is_zero()));
 }

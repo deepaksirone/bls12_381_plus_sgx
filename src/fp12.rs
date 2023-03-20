@@ -662,7 +662,7 @@ fn test_arithmetic() {
 fn test_zeroize() {
     use zeroize::Zeroize;
 
-    let mut a = Fp12::one();
+    let mut a = Fp12::ONE;
     a.zeroize();
     assert!(bool::from(a.is_zero()));
 }
