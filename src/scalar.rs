@@ -1355,9 +1355,3 @@ fn test_serialization() {
     let s2: Scalar = serde_json::from_str(&hex1).unwrap();
     assert_eq!(s1, s2);
 }
-
-#[test]
-fn print_constants() {
-    let tmp = Scalar::montgomery_reduce(ROOT_OF_UNITY.0[0], ROOT_OF_UNITY.0[1], ROOT_OF_UNITY.0[2], ROOT_OF_UNITY.0[3], 0, 0, 0, 0);
-    println!("{}", tmp);
-}
