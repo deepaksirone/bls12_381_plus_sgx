@@ -14,7 +14,7 @@ homepage = "https://github.com/mikelodder7/bls12_381_plus"
 license = "MIT/Apache-2.0"
 name = "bls12_381_plus"
 repository = "https://github.com/mikelodder7/bls12_381_plus"
-version = "0.8.0"
+version = "0.8.0-pre0"
 edition = "2021"
 
 [package.metadata.docs.rs]
@@ -33,10 +33,6 @@ sha3 = "0.10"
 name = "groups"
 harness = false
 required-features = ["groups"]
-
-[[bench]]
-name = "hash_to_curve"
-harness = false
 
 [dependencies.elliptic-curve]
 version = "0.13"
