@@ -186,6 +186,10 @@ const B: Fp = Fp::from_raw_unchecked([
 ]);
 
 impl G1Affine {
+    /// Bytes to represent this point compressed
+    pub const COMPRESSED_BYTES: usize = 48;
+    /// Bytes to represent this point uncompressed
+    pub const UNCOMPRESSED_BYTES: usize = 96;
     /// Returns the identity of the group: the point at infinity.
     pub fn identity() -> G1Affine {
         G1Affine {
@@ -443,7 +447,8 @@ impl_serde!(
     G1Affine,
     |p: &G1Affine| p.to_compressed(),
     G1Affine::from_compressed,
-    48
+    G1Affine::COMPRESSED_BYTES,
+    G1Affine::UNCOMPRESSED_BYTES
 );
 
 /// This is an element of $\mathbb{G}_1$ represented in the projective coordinate space.
@@ -649,6 +654,11 @@ fn mul_by_3b(a: Fp) -> Fp {
 }
 
 impl G1Projective {
+    /// Bytes to represent this point compressed
+    pub const COMPRESSED_BYTES: usize = 48;
+    /// Bytes to represent this point uncompressed
+    pub const UNCOMPRESSED_BYTES: usize = 96;
+
     /// The identity of the group: the point at infinity.
     pub const IDENTITY: Self = Self {
         x: Fp::ZERO,

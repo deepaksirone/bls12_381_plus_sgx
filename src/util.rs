@@ -316,8 +316,9 @@ macro_rules! impl_pippenger_sum_of_products {
 }
 
 macro_rules! impl_serde {
-    ($name:ident, $serfunc:expr, $deserfunc:expr, $len:expr) => {
+    ($name:ident, $serfunc:expr, $deserfunc:expr, $len:expr, $hexlen:expr) => {
         impl serde::Serialize for $name {
+            #[allow(unsafe_code)]
             fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
             where
                 S: serde::Serializer,
@@ -327,7 +328,10 @@ macro_rules! impl_serde {
                 let bytes = $serfunc(self);
 
                 if s.is_human_readable() {
-                    hex::encode(bytes).serialize(s)
+                    let mut hexits = [0u8; $hexlen];
+                    hex::encode_to_slice(bytes, &mut hexits).unwrap();
+                    let ss = unsafe { core::str::from_utf8_unchecked(&hexits) };
+                    ss.serialize(s)
                 } else {
                     let mut seq = s.serialize_tuple(bytes.len())?;
                     for b in &bytes[..] {
@@ -378,11 +382,10 @@ macro_rules! impl_serde {
                     where
                         E: serde::de::Error,
                     {
-                        let arr = hex::decode(s)
+                        let mut arr = [0u8; $len];
+                        hex::decode_to_slice(s, &mut arr)
                             .map_err(|_e| serde::de::Error::invalid_length(s.len(), &self))?;
-                        let mut tmp = [0u8; $len];
-                        tmp.copy_from_slice(&arr);
-                        let p = $deserfunc(&tmp);
+                        let p = $deserfunc(&arr);
                         if p.is_some().unwrap_u8() == 1 {
                             Ok(p.unwrap())
                         } else {

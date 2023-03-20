@@ -4,11 +4,13 @@ use crate::fp2::Fp2;
 use crate::fp6::Fp6;
 use crate::{G1Affine, G1Projective, G2Affine, G2Projective, Scalar, BLS_X, BLS_X_IS_NEGATIVE};
 
-use core::borrow::Borrow;
-use core::convert::TryFrom;
-use core::fmt;
-use core::iter::Sum;
-use core::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+use arrayref::array_ref;
+use core::{
+    borrow::Borrow,
+    fmt::{self, Display, Formatter},
+    iter::Sum,
+    ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
+};
 use group::{Group, GroupEncoding};
 use heapless::Vec;
 use pairing::{Engine, PairingCurveAffine};
@@ -218,8 +220,8 @@ impl Default for Gt {
 #[cfg(feature = "zeroize")]
 impl zeroize::DefaultIsZeroes for Gt {}
 
-impl fmt::Display for Gt {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl Display for Gt {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{:?}", self)
     }
 }
@@ -248,7 +250,10 @@ impl Gt {
     /// The group identity, which is $1$.
     pub const IDENTITY: Self = Self(Fp12::ONE);
 
-    const BYTES: usize = 576;
+    /// Bytes to represent this field
+    pub const BYTES: usize = 576;
+
+    const HEX_BYTES: usize = Self::BYTES * 2;
 
     /// Returns the group identity, which is $1$.
     #[deprecated(since = "0.5.5", note = "Use IDENTITY instead.")]
@@ -282,18 +287,18 @@ impl Gt {
     /// Attempts to convert a big-endian byte representation of
     /// a scalar into a `Gt`, failing if the input is not canonical.
     pub fn from_bytes(bytes: &[u8; Self::BYTES]) -> CtOption<Self> {
-        let c000 = Fp::from_bytes(&<[u8; 48]>::try_from(&bytes[..48]).unwrap());
-        let c001 = Fp::from_bytes(&<[u8; 48]>::try_from(&bytes[48..96]).unwrap());
-        let c010 = Fp::from_bytes(&<[u8; 48]>::try_from(&bytes[96..144]).unwrap());
-        let c011 = Fp::from_bytes(&<[u8; 48]>::try_from(&bytes[144..192]).unwrap());
-        let c020 = Fp::from_bytes(&<[u8; 48]>::try_from(&bytes[192..240]).unwrap());
-        let c021 = Fp::from_bytes(&<[u8; 48]>::try_from(&bytes[240..288]).unwrap());
-        let c100 = Fp::from_bytes(&<[u8; 48]>::try_from(&bytes[288..336]).unwrap());
-        let c101 = Fp::from_bytes(&<[u8; 48]>::try_from(&bytes[336..384]).unwrap());
-        let c110 = Fp::from_bytes(&<[u8; 48]>::try_from(&bytes[384..432]).unwrap());
-        let c111 = Fp::from_bytes(&<[u8; 48]>::try_from(&bytes[432..480]).unwrap());
-        let c120 = Fp::from_bytes(&<[u8; 48]>::try_from(&bytes[480..528]).unwrap());
-        let c121 = Fp::from_bytes(&<[u8; 48]>::try_from(&bytes[528..Self::BYTES]).unwrap());
+        let c000 = Fp::from_bytes(array_ref![bytes, 0, 48]);
+        let c001 = Fp::from_bytes(array_ref![bytes, 48, 48]);
+        let c010 = Fp::from_bytes(array_ref![bytes, 96, 48]);
+        let c011 = Fp::from_bytes(array_ref![bytes, 144, 48]);
+        let c020 = Fp::from_bytes(array_ref![bytes, 192, 48]);
+        let c021 = Fp::from_bytes(array_ref![bytes, 240, 48]);
+        let c100 = Fp::from_bytes(array_ref![bytes, 288, 48]);
+        let c101 = Fp::from_bytes(array_ref![bytes, 336, 48]);
+        let c110 = Fp::from_bytes(array_ref![bytes, 384, 48]);
+        let c111 = Fp::from_bytes(array_ref![bytes, 432, 48]);
+        let c120 = Fp::from_bytes(array_ref![bytes, 480, 48]);
+        let c121 = Fp::from_bytes(array_ref![bytes, 528, 48]);
 
         c000.and_then(|cc000| {
             c001.and_then(|cc001| {
@@ -624,7 +629,8 @@ impl_serde!(
     Gt,
     |p: &Gt| p.to_bytes(),
     |arr: &[u8; Gt::BYTES]| Gt::from_bytes(arr),
-    Gt::BYTES
+    Gt::BYTES,
+    Gt::HEX_BYTES
 );
 
 #[cfg_attr(docsrs, doc(cfg(all(feature = "pairings"))))]

@@ -201,6 +201,10 @@ const B: Fp2 = Fp2 {
 const B3: Fp2 = Fp2::add(&Fp2::add(&B, &B), &B);
 
 impl G2Affine {
+    /// Bytes to represent this point compressed
+    pub const COMPRESSED_BYTES: usize = 96;
+    /// Bytes to represent this point uncompressed
+    pub const UNCOMPRESSED_BYTES: usize = 192;
     /// Returns the identity of the group: the point at infinity.
     pub fn identity() -> G2Affine {
         G2Affine {
@@ -498,7 +502,8 @@ impl_serde!(
     G2Affine,
     |p: &G2Affine| p.to_compressed(),
     G2Affine::from_compressed,
-    96
+    G2Affine::COMPRESSED_BYTES,
+    G2Affine::UNCOMPRESSED_BYTES
 );
 
 /// This is an element of $\mathbb{G}_2$ represented in the projective coordinate space.
@@ -664,6 +669,10 @@ fn mul_by_3b(x: Fp2) -> Fp2 {
 }
 
 impl G2Projective {
+    /// Bytes to represent this point compressed
+    pub const COMPRESSED_BYTES: usize = 96;
+    /// Bytes to represent this point uncompressed
+    pub const UNCOMPRESSED_BYTES: usize = 192;
     /// The identity of the group: the point at infinity.
     pub const IDENTITY: Self = Self {
         x: Fp2::ZERO,

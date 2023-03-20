@@ -245,12 +245,16 @@ impl Default for Scalar {
 impl_serde!(
     Scalar,
     |s: &Scalar| s.to_bytes(),
-    // |arr: &[u8; 32]| Scalar::from_bytes(arr),
     Scalar::from_bytes,
-    32
+    Scalar::BYTES,
+    Scalar::HEX_BYTES
 );
 
 impl Scalar {
+    /// Bytes to represent this field
+    pub const BYTES: usize = 32;
+    /// The number of hex bytes needed
+    const HEX_BYTES: usize = Self::BYTES * 2;
     /// The additive identity.
     pub const ZERO: Scalar = Scalar([0, 0, 0, 0]);
 

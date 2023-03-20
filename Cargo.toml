@@ -22,6 +22,7 @@ rustdoc-args = [ "--html-in-header", "katex-header.html" ]
 
 [dev-dependencies]
 criterion = "0.4"
+hex = "0.4"
 rand_xorshift = "0.3"
 serde_bare = "0.5"
 serde_json = "1.0"
@@ -36,7 +37,6 @@ required-features = ["groups"]
 [[bench]]
 name = "hash_to_curve"
 harness = false
-required-features = ["experimental"]
 
 [dependencies.elliptic-curve]
 version = "0.13"
@@ -60,7 +60,7 @@ version = "0.6"
 default-features = false
 
 [dependencies.subtle]
-version = "2.4"
+version = "2.5"
 default-features = false
 
 [dependencies.zeroize]
@@ -77,16 +77,16 @@ version = "0.7"
 
 [dependencies.hex]
 version = "0.4"
+default-features = false
 
 [dependencies.arrayref]
 version = "0.3"
-optional = true
 
 [features]
 default = ["groups", "pairings", "alloc", "bits", "hashing"]
 bits = ["ff/bits"]
 expose-fields = ["groups"]
 groups = ["group"]
-hashing = ["elliptic-curve/hash2curve", "arrayref"]
+hashing = ["elliptic-curve/hash2curve"]
 pairings = ["groups", "pairing"]
 alloc = ["group/alloc"]
