@@ -75,10 +75,8 @@ impl ConditionallySelectable for Scalar {
     }
 }
 
-#[cfg(feature = "zeroize")]
 impl zeroize::DefaultIsZeroes for Scalar {}
 
-#[cfg(feature = "zeroize")]
 impl zeroize::Zeroize for Scalar {
     fn zeroize(&mut self) {
         self.0.zeroize()
@@ -1330,7 +1328,6 @@ fn test_from_okm() {
     assert_eq!(actual, expected)
 }
 
-#[cfg(feature = "zeroize")]
 #[test]
 fn test_zeroize() {
     use zeroize::Zeroize;
@@ -1357,4 +1354,10 @@ fn test_serialization() {
     let hex1 = serde_json::to_string(&s1).unwrap();
     let s2: Scalar = serde_json::from_str(&hex1).unwrap();
     assert_eq!(s1, s2);
+}
+
+#[test]
+fn print_constants() {
+    let tmp = Scalar::montgomery_reduce(ROOT_OF_UNITY.0[0], ROOT_OF_UNITY.0[1], ROOT_OF_UNITY.0[2], ROOT_OF_UNITY.0[3], 0, 0, 0, 0);
+    println!("{}", tmp);
 }

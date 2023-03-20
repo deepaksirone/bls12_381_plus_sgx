@@ -40,7 +40,6 @@ impl Default for G1Affine {
     }
 }
 
-#[cfg(feature = "zeroize")]
 impl zeroize::DefaultIsZeroes for G1Affine {}
 
 impl fmt::Display for G1Affine {
@@ -466,7 +465,6 @@ impl Default for G1Projective {
     }
 }
 
-#[cfg(feature = "zeroize")]
 impl zeroize::DefaultIsZeroes for G1Projective {}
 
 impl fmt::Display for G1Projective {
@@ -954,7 +952,6 @@ impl Default for G1Compressed {
     }
 }
 
-#[cfg(feature = "zeroize")]
 impl zeroize::DefaultIsZeroes for G1Compressed {}
 
 impl AsRef<[u8]> for G1Compressed {
@@ -998,7 +995,6 @@ impl Default for G1Uncompressed {
     }
 }
 
-#[cfg(feature = "zeroize")]
 impl zeroize::DefaultIsZeroes for G1Uncompressed {}
 
 impl AsRef<[u8]> for G1Uncompressed {
@@ -1811,7 +1807,6 @@ fn test_batch_normalize() {
     }
 }
 
-#[cfg(feature = "zeroize")]
 #[test]
 fn test_zeroize() {
     use zeroize::Zeroize;

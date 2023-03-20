@@ -32,7 +32,6 @@ impl Default for MillerLoopResult {
     }
 }
 
-#[cfg(feature = "zeroize")]
 impl zeroize::DefaultIsZeroes for MillerLoopResult {}
 
 impl ConditionallySelectable for MillerLoopResult {
@@ -217,7 +216,6 @@ impl Default for Gt {
     }
 }
 
-#[cfg(feature = "zeroize")]
 impl zeroize::DefaultIsZeroes for Gt {}
 
 impl Display for Gt {
@@ -1072,7 +1070,6 @@ fn test_miller_loop_result_default() {
     );
 }
 
-#[cfg(feature = "zeroize")]
 #[test]
 fn test_miller_loop_result_zeroize() {
     use zeroize::Zeroize;

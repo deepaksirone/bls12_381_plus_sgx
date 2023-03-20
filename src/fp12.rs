@@ -62,7 +62,6 @@ impl Default for Fp12 {
     }
 }
 
-#[cfg(feature = "zeroize")]
 impl zeroize::DefaultIsZeroes for Fp12 {}
 
 impl fmt::Debug for Fp12 {
@@ -659,7 +658,6 @@ fn test_arithmetic() {
     );
 }
 
-#[cfg(feature = "zeroize")]
 #[test]
 fn test_zeroize() {
     use zeroize::Zeroize;

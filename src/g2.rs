@@ -43,7 +43,6 @@ impl Default for G2Affine {
     }
 }
 
-#[cfg(feature = "zeroize")]
 impl zeroize::DefaultIsZeroes for G2Affine {}
 
 impl fmt::Display for G2Affine {
@@ -521,7 +520,6 @@ impl Default for G2Projective {
     }
 }
 
-#[cfg(feature = "zeroize")]
 impl zeroize::DefaultIsZeroes for G2Projective {}
 
 impl fmt::Display for G2Projective {
@@ -1191,7 +1189,6 @@ impl Default for G2Compressed {
     }
 }
 
-#[cfg(feature = "zeroize")]
 impl zeroize::DefaultIsZeroes for G2Compressed {}
 
 impl AsRef<[u8]> for G2Compressed {
@@ -1235,7 +1232,6 @@ impl Default for G2Uncompressed {
     }
 }
 
-#[cfg(feature = "zeroize")]
 impl zeroize::DefaultIsZeroes for G2Uncompressed {}
 
 impl AsRef<[u8]> for G2Uncompressed {
@@ -2352,7 +2348,6 @@ fn test_batch_normalize() {
     }
 }
 
-#[cfg(feature = "zeroize")]
 #[test]
 fn test_zeroize() {
     use zeroize::Zeroize;

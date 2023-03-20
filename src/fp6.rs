@@ -55,7 +55,6 @@ impl Default for Fp6 {
     }
 }
 
-#[cfg(feature = "zeroize")]
 impl zeroize::DefaultIsZeroes for Fp6 {}
 
 impl fmt::Debug for Fp6 {
@@ -573,7 +572,6 @@ fn test_arithmetic() {
     assert_eq!(a.invert().unwrap() * a, Fp6::ONE);
 }
 
-#[cfg(feature = "zeroize")]
 #[test]
 fn test_zeroize() {
     use zeroize::Zeroize;

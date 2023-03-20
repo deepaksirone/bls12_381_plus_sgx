@@ -32,7 +32,6 @@ impl Default for Fp2 {
     }
 }
 
-#[cfg(feature = "zeroize")]
 impl zeroize::DefaultIsZeroes for Fp2 {}
 
 impl From<Fp> for Fp2 {
@@ -953,7 +952,6 @@ fn test_lexicographic_largest() {
     ));
 }
 
-#[cfg(feature = "zeroize")]
 #[test]
 fn test_zeroize() {
     use zeroize::Zeroize;

@@ -46,7 +46,6 @@ impl Default for Fp {
     }
 }
 
-#[cfg(feature = "zeroize")]
 impl zeroize::DefaultIsZeroes for Fp {}
 
 impl ConstantTimeEq for Fp {
@@ -1238,7 +1237,6 @@ fn test_lexicographic_largest() {
     ));
 }
 
-#[cfg(feature = "zeroize")]
 #[test]
 fn test_zeroize() {
     use zeroize::Zeroize;
