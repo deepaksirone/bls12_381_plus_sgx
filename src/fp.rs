@@ -1,21 +1,26 @@
 //! This module provides an implementation of the BLS12-381 base field `GF(p)`
 //! where `p = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab`
 
+use crate::G1Projective;
 use core::convert::TryFrom;
 use core::fmt;
 use core::iter::{Iterator, Product, Sum};
 use core::ops::{Add, AddAssign, BitOr, Mul, MulAssign, Neg, Sub, SubAssign};
-use digest::generic_array::GenericArray;
 #[cfg(feature = "hashing")]
-use elliptic_curve::hash2curve::{ExpandMsg, Expander, Sgn0};
-use ff::{Field, PrimeField};
+use elliptic_curve::{
+    generic_array::{
+        typenum::{U16, U64},
+        GenericArray,
+    },
+    hash2curve::{
+        ExpandMsg, Expander, FromOkm, Isogeny, IsogenyCoefficients, MapToCurve, OsswuMap,
+        OsswuMapParams, Sgn0,
+    },
+};
+use ff::Field;
 use rand_core::RngCore;
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
-// #[cfg(feature = "hashing")]
-// use crate::hash_to_field::ExpandMsg;
-// #[cfg(feature = "hashing")]
-// use crate::signum::Sgn0Result;
 use crate::util::{adc, mac, sbb};
 
 /// The internal representation of this type is six 64-bit unsigned
@@ -168,8 +173,8 @@ impl_binops_additive!(Fp, Fp);
 impl_binops_multiplicative!(Fp, Fp);
 
 #[cfg(feature = "hashing")]
-impl elliptic_curve::hash2curve::FromOkm for Fp {
-    type Length = elliptic_curve::generic_array::typenum::U64;
+impl FromOkm for Fp {
+    type Length = U64;
 
     fn from_okm(data: &GenericArray<u8, Self::Length>) -> Self {
         let input = arrayref::array_ref![data, 0, 64];
@@ -185,113 +190,104 @@ impl Sgn0 for Fp {
     }
 }
 
-// #[cfg(feature = "hashing")]
-// impl elliptic_curve::hash2curve::OsswuMap for Fp {
-//     const PARAMS: elliptic_curve::hash2curve::OsswuMapParams<Self> = elliptic_curve::hash2curve::OsswuMapParams {
-//         c1: &[
-//             0xee7f_bfff_ffff_eaaau64,
-//             0x07aa_ffff_ac54_ffffu64,
-//             0xd9cc_34a8_3dac_3d89u64,
-//             0xd91d_d2e1_3ce1_44afu64,
-//             0x92c6_e9ed_90d2_eb35u64,
-//             0x0680_447a_8e5f_f9a6u64,
-//         ],
-//         c2: Fp([
-//             0x43b5_71ca_d321_5f1fu64,
-//             0xccb4_60ef_1c70_2dc2u64,
-//             0x742d_884f_4f97_100bu64,
-//             0xdb2c_3e32_38a3_382bu64,
-//             0xe40f_3fa1_3fce_8f88u64,
-//             0x0073_a2af_9892_a2ffu64,
-//         ]),
-//         map_a: Fp([
-//             0x2f65_aa0e_9af5_aa51u64,
-//             0x8646_4c2d_1e84_16c3u64,
-//             0xb85c_e591_b7bd_31e2u64,
-//             0x27e1_1c91_b5f2_4e7cu64,
-//             0x2837_6eda_6bfc_1835u64,
-//             0x1554_55c3_e507_1d85u64,
-//         ]),
-//         map_b: Fp([
-//             0xfb99_6971_fe22_a1e0u64,
-//             0x9aa9_3eb3_5b74_2d6fu64,
-//             0x8c47_6013_de99_c5c4u64,
-//             0x873e_27c3_a221_e571u64,
-//             0xca72_b5e4_5a52_d888u64,
-//             0x0682_4061_418a_386bu64,
-//         ]),
-//         z: Fp([
-//             0x886c00000023ffdcu64,
-//             0xf70008d3090001du64,
-//             0x77672417ed5828c3u64,
-//             0x9dac23e943dc1740u64,
-//             0x50553f1b9c131521u64,
-//             0x78c712fbe0ab6e8u64,
-//         ]),
-//     };
-// }
-//
-// impl Field for Fp {
-//     const ZERO: Self = Fp::ZERO;
-//     const ONE: Self = Fp::ONE;
-//
-//     fn random(rng: impl RngCore) -> Self {
-//         Fp::random(rng)
-//     }
-//
-//     fn square(&self) -> Self {
-//         self.square()
-//     }
-//
-//     fn double(&self) -> Self {
-//         self.double()
-//     }
-//
-//     fn invert(&self) -> CtOption<Self> {
-//         self.invert()
-//     }
-//
-//     fn sqrt_ratio(num: &Self, div: &Self) -> (Choice, Self) {
-//         // ff::helpers::sqrt_ratio_generic(num, div)
-//         unimplemented!()
-//     }
-// }
-//
-// impl PrimeField for Fp {
-//     type Repr = [u64; 6];
-//
-//     fn from_repr(repr: Self::Repr) -> CtOption<Self> {
-//         CtOption::new(Fp([
-//             repr[0],
-//             repr[1],
-//             repr[2],
-//             repr[3],
-//             repr[4],
-//             repr[5],
-//         ]) * R2, 1.into())
-//     }
-//
-//     fn to_repr(&self) -> Self::Repr {
-//         Self::montgomery_reduce(
-//             self.0[0], self.0[1], self.0[2], self.0[3], self.0[4], self.0[5], 0, 0, 0, 0, 0, 0,
-//         ).0
-//     }
-//
-//     fn is_odd(&self) -> Choice {
-//         <Self as Sgn0>::sgn0(self)
-//     }
-//
-//     const MODULUS: &'static str = "";
-//     const NUM_BITS: u32 = 0;
-//     const CAPACITY: u32 = 0;
-//     const TWO_INV: Self = ();
-//     const MULTIPLICATIVE_GENERATOR: Self = ();
-//     const S: u32 = 48;
-//     const ROOT_OF_UNITY: Self = ();
-//     const ROOT_OF_UNITY_INV: Self = ();
-//     const DELTA: Self = ();
-// }
-//
+#[cfg(feature = "hashing")]
+impl OsswuMap for Fp {
+    const PARAMS: OsswuMapParams<Self> = OsswuMapParams {
+        c1: &[
+            0xee7f_bfff_ffff_eaaau64,
+            0x07aa_ffff_ac54_ffffu64,
+            0xd9cc_34a8_3dac_3d89u64,
+            0xd91d_d2e1_3ce1_44afu64,
+            0x92c6_e9ed_90d2_eb35u64,
+            0x0680_447a_8e5f_f9a6u64,
+        ],
+        c2: Fp([
+            0x43b5_71ca_d321_5f1fu64,
+            0xccb4_60ef_1c70_2dc2u64,
+            0x742d_884f_4f97_100bu64,
+            0xdb2c_3e32_38a3_382bu64,
+            0xe40f_3fa1_3fce_8f88u64,
+            0x0073_a2af_9892_a2ffu64,
+        ]),
+        map_a: Fp([
+            0x2f65_aa0e_9af5_aa51u64,
+            0x8646_4c2d_1e84_16c3u64,
+            0xb85c_e591_b7bd_31e2u64,
+            0x27e1_1c91_b5f2_4e7cu64,
+            0x2837_6eda_6bfc_1835u64,
+            0x1554_55c3_e507_1d85u64,
+        ]),
+        map_b: Fp([
+            0xfb99_6971_fe22_a1e0u64,
+            0x9aa9_3eb3_5b74_2d6fu64,
+            0x8c47_6013_de99_c5c4u64,
+            0x873e_27c3_a221_e571u64,
+            0xca72_b5e4_5a52_d888u64,
+            0x0682_4061_418a_386bu64,
+        ]),
+        z: Fp([
+            0x886c00000023ffdcu64,
+            0xf70008d3090001du64,
+            0x77672417ed5828c3u64,
+            0x9dac23e943dc1740u64,
+            0x50553f1b9c131521u64,
+            0x78c712fbe0ab6e8u64,
+        ]),
+    };
+}
+
+#[cfg(feature = "hashing")]
+impl MapToCurve for Fp {
+    type Output = G1Projective;
+
+    fn map_to_curve(&self) -> Self::Output {
+        let (rx, ry) = self.osswu();
+        let (qx, qy) = Fp::isogeny(rx, ry);
+        G1Projective {
+            x: qx,
+            y: qy,
+            z: Fp::ONE,
+        }
+    }
+}
+
+#[cfg(feature = "hashing")]
+impl Isogeny for Fp {
+    type Degree = U16;
+    const COEFFICIENTS: IsogenyCoefficients<Self> = IsogenyCoefficients {
+        xnum: &crate::isogeny::g1::XNUM,
+        xden: &crate::isogeny::g1::XDEN,
+        ynum: &crate::isogeny::g1::YNUM,
+        yden: &crate::isogeny::g1::YDEN,
+    };
+}
+
+impl Field for Fp {
+    const ZERO: Self = Fp::ZERO;
+    const ONE: Self = Fp::ONE;
+
+    fn random(rng: impl RngCore) -> Self {
+        Fp::random(rng)
+    }
+
+    fn square(&self) -> Self {
+        self.square()
+    }
+
+    fn double(&self) -> Self {
+        self.double()
+    }
+
+    fn invert(&self) -> CtOption<Self> {
+        self.invert()
+    }
+
+    fn sqrt_ratio(_num: &Self, _div: &Self) -> (Choice, Self) {
+        // ff::helpers::sqrt_ratio_generic(num, div)
+        unimplemented!()
+    }
+}
+
 impl From<u64> for Fp {
     fn from(value: u64) -> Self {
         Self([value, 0, 0, 0, 0, 0]) * R2
@@ -581,7 +577,7 @@ impl Fp {
 
         // Attempt to subtract the modulus, to ensure the value
         // is smaller than the modulus.
-        (&Fp([d0, d1, d2, d3, d4, d5])).subtract_p()
+        Fp([d0, d1, d2, d3, d4, d5]).subtract_p()
     }
 
     /// Negate this element
@@ -674,7 +670,7 @@ impl Fp {
 
         // Because we represent F_p elements in non-redundant form, we need a final
         // conditional subtraction to ensure the output is in range.
-        (&Fp([u0, u1, u2, u3, u4, u5])).subtract_p()
+        Fp([u0, u1, u2, u3, u4, u5]).subtract_p()
     }
 
     #[inline(always)]
@@ -752,7 +748,7 @@ impl Fp {
 
         // Attempt to subtract the modulus, to ensure the value
         // is smaller than the modulus.
-        (&Fp([r6, r7, r8, r9, r10, r11])).subtract_p()
+        Fp([r6, r7, r8, r9, r10, r11]).subtract_p()
     }
 
     /// Return 2*self
@@ -876,17 +872,6 @@ impl Fp {
         let res = self.pow_vartime(&PM1DIV2);
         res.is_zero().bitor(res.ct_eq(&Self::ONE))
     }
-
-    // #[cfg(feature = "hashing")]
-    // #[inline]
-    // pub(crate) fn sgn0(&self) -> Sgn0Result {
-    //     let bytes = self.to_bytes();
-    //     if bytes[47] & 1 == 1 {
-    //         Sgn0Result::Negative
-    //     } else {
-    //         Sgn0Result::NonNegative
-    //     }
-    // }
 
     #[cfg(feature = "hashing")]
     /// Take 64 bytes and compute the result reduced by the field modulus

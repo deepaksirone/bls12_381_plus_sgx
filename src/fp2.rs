@@ -383,33 +383,6 @@ impl Fp2 {
         res
     }
 
-    /// Vartime exponentiation for larger exponents, only
-    /// used in testing and not exposed through the public API.
-    #[cfg(all(test, feature = "experimental"))]
-    pub(crate) fn pow_vartime_extended(&self, by: &[u64]) -> Self {
-        let mut res = Self::ONE;
-        for e in by.iter().rev() {
-            for i in (0..64).rev() {
-                res = res.square();
-
-                if ((*e >> i) & 1) == 1 {
-                    res *= self;
-                }
-            }
-        }
-        res
-    }
-
-    // #[cfg(feature = "hashing")]
-    // #[inline]
-    // pub(crate) fn sgn0(&self) -> Sgn0Result {
-    //     if self.c0.is_zero().unwrap_u8() == 1 {
-    //         self.c1.sgn0()
-    //     } else {
-    //         self.c0.sgn0()
-    //     }
-    // }
-
     #[cfg(feature = "hashing")]
     /// Take 64 bytes and compute the result reduced by the field modulus
     pub fn from_random_bytes(okm: [u8; 128]) -> Self {

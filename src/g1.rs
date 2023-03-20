@@ -9,15 +9,16 @@ use group::{
     Curve, Group, GroupEncoding, UncompressedEncoding,
 };
 use rand_core::RngCore;
-use subtle::{Choice, ConditionallyNegatable, ConditionallySelectable, ConstantTimeEq, CtOption};
+use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
 #[cfg(feature = "alloc")]
 use group::WnafGroup;
 
 use crate::fp::Fp;
 use crate::Scalar;
+use elliptic_curve::hash2curve::MapToCurve;
 #[cfg(feature = "hashing")]
-use elliptic_curve::hash2curve::{ExpandMsg, Sgn0};
+use elliptic_curve::{group::cofactor::CofactorGroup, hash2curve::ExpandMsg};
 
 /// This is an element of $\mathbb{G}_1$ represented in the affine coordinate space.
 /// It is ideal to keep elements in this representation to reduce memory usage and
@@ -620,11 +621,15 @@ impl<'de> serde::Deserialize<'de> for G1Projective {
     }
 }
 
-impl group::cofactor::CofactorGroup for G1Projective {
+#[cfg(feature = "hashing")]
+impl CofactorGroup for G1Projective {
     type Subgroup = G1Projective;
 
+    /// Multiplies by $(1 - z)$, where $z$ is the parameter of BLS12-381, which
+    /// [suffices to clear](https://ia.cr/2019/403) the cofactor and map
+    /// elliptic curve points to elements of $\mathbb{G}\_1$.
     fn clear_cofactor(&self) -> Self::Subgroup {
-        self.clear_cofactor()
+        self - self.mul_by_x()
     }
 
     fn into_subgroup(self) -> CtOption<Self::Subgroup> {
@@ -840,17 +845,10 @@ impl G1Projective {
             x >>= 1;
         }
         // finally, flip the sign
-        if crate::BLS_X_IS_NEGATIVE {
-            xself = -xself;
-        }
+        // if crate::BLS_X_IS_NEGATIVE {
+        xself = -xself;
+        // }
         xself
-    }
-
-    /// Multiplies by $(1 - z)$, where $z$ is the parameter of BLS12-381, which
-    /// [suffices to clear](https://ia.cr/2019/403) the cofactor and map
-    /// elliptic curve points to elements of $\mathbb{G}\_1$.
-    pub fn clear_cofactor(&self) -> G1Projective {
-        self - self.mul_by_x()
     }
 
     /// Converts a batch of `G1Projective` elements into `G1Affine` elements. This
@@ -913,7 +911,7 @@ impl G1Projective {
     {
         {
             let u = Fp::hash::<X>(msg, dst);
-            Self::osswu_map(&u[0]).isogeny_map() + Self::osswu_map(&u[1]).isogeny_map()
+            u[0].map_to_curve() + u[1].map_to_curve()
         }
         .clear_cofactor()
     }
@@ -925,127 +923,7 @@ impl G1Projective {
         X: for<'a> ExpandMsg<'a>,
     {
         let u = Fp::encode::<X>(msg, dst);
-        Self::osswu_map(&u).isogeny_map().clear_cofactor()
-    }
-
-    #[cfg(feature = "hashing")]
-    pub(crate) fn isogeny_map(&self) -> Self {
-        use crate::isogeny::g1::*;
-
-        fn compute(xxs: &[Fp], k: &[Fp]) -> Fp {
-            let mut xx = Fp::ZERO;
-            for i in 0..k.len() {
-                xx += xxs[i] * k[i];
-            }
-            xx
-        }
-
-        let mut xs = [Fp::ONE; 16];
-        xs[1] = self.x;
-        xs[2] = self.x.square();
-        for i in 3..16 {
-            xs[i] = xs[i - 1] * self.x;
-        }
-
-        let x_num = compute(&xs, &XNUM);
-        let x_den = compute(&xs, &XDEN);
-        let y_num = compute(&xs, &YNUM);
-        let y_den = compute(&xs, &YDEN);
-
-        let x = x_num * x_den.invert().unwrap();
-        let y = self.y * y_num * y_den.invert().unwrap();
-        Self { x, y, z: Fp::ONE }
-    }
-
-    #[cfg(feature = "hashing")]
-    /// Optimized simplified swu map for q = 3 mod 4 where AB == 0
-    fn osswu_map(u: &Fp) -> Self {
-        // Taken from section 8.8.1 in
-        // <https://www.ietf.org/archive/id/draft-irtf-cfrg-hash-to-curve-10.html>
-        const A: Fp = Fp([
-            0x2f65_aa0e_9af5_aa51u64,
-            0x8646_4c2d_1e84_16c3u64,
-            0xb85c_e591_b7bd_31e2u64,
-            0x27e1_1c91_b5f2_4e7cu64,
-            0x2837_6eda_6bfc_1835u64,
-            0x1554_55c3_e507_1d85u64,
-        ]);
-        const B: Fp = Fp([
-            0xfb99_6971_fe22_a1e0u64,
-            0x9aa9_3eb3_5b74_2d6fu64,
-            0x8c47_6013_de99_c5c4u64,
-            0x873e_27c3_a221_e571u64,
-            0xca72_b5e4_5a52_d888u64,
-            0x0682_4061_418a_386bu64,
-        ]);
-        const C1: [u64; 6] = [
-            0xee7f_bfff_ffff_eaaau64,
-            0x07aa_ffff_ac54_ffffu64,
-            0xd9cc_34a8_3dac_3d89u64,
-            0xd91d_d2e1_3ce1_44afu64,
-            0x92c6_e9ed_90d2_eb35u64,
-            0x0680_447a_8e5f_f9a6u64,
-        ];
-        const C2: Fp = Fp([
-            0x43b5_71ca_d321_5f1fu64,
-            0xccb4_60ef_1c70_2dc2u64,
-            0x742d_884f_4f97_100bu64,
-            0xdb2c_3e32_38a3_382bu64,
-            0xe40f_3fa1_3fce_8f88u64,
-            0x0073_a2af_9892_a2ffu64,
-        ]);
-        const Z: Fp = Fp([
-            0x886c00000023ffdcu64,
-            0xf70008d3090001du64,
-            0x77672417ed5828c3u64,
-            0x9dac23e943dc1740u64,
-            0x50553f1b9c131521u64,
-            0x78c712fbe0ab6e8u64,
-        ]);
-        const XD1: Fp = Fp::mul(&Z, &A);
-
-        // tv1 = u^2
-        let tv1 = u.square();
-        // tv3 = Z * tv1
-        let tv3 = Z * tv1;
-        // tv2 = tv3^2
-        let mut tv2 = tv3.square();
-        // xd = tv2 + tv3
-        let mut xd = tv2 + tv3;
-        // x1n = xd + 1
-        // x1n = x1n * B
-        let x1n = (xd + Fp::ONE) * B;
-        // xd = -A * xd
-        xd *= A.neg();
-        // xd = CMOV(xd, Z * A, xd == 0)
-        xd.conditional_assign(&XD1, xd.is_zero());
-        // tv2 = xd^2
-        tv2 = xd.square();
-        let gxd = tv2 * xd;
-        tv2 *= A;
-        let mut gx1 = (x1n.square() + tv2) * x1n;
-        tv2 = B * gxd;
-        gx1 += tv2;
-        let mut tv4 = gxd.square();
-        tv2 = gx1 * gxd;
-        tv4 *= tv2;
-        let y1 = tv4.pow_vartime(&C1) * tv2;
-        let mut x2n = tv3 * x1n;
-        let mut y2 = y1 * C2 * tv1 * u;
-        tv2 = y1.square() * gxd;
-        let e2 = ((tv2 == gx1) as u8).into();
-
-        x2n.conditional_assign(&x1n, e2);
-        y2.conditional_assign(&y1, e2);
-
-        let e3 = u.sgn0() ^ y2.sgn0();
-        y2.conditional_negate(e3);
-
-        Self {
-            x: x2n * xd.invert().unwrap(),
-            y: y2,
-            z: Fp::ONE,
-        }
+        u.map_to_curve().clear_cofactor()
     }
 
     impl_pippenger_sum_of_products!();

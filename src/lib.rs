@@ -51,7 +51,6 @@ pub mod notes {
 
 mod scalar;
 
-use elliptic_curve::{Curve, CurveArithmetic};
 pub use scalar::Scalar;
 
 #[cfg(all(feature = "groups", not(feature = "expose-fields")))]
@@ -92,7 +91,7 @@ mod fp6;
 //     type ProjectivePoint = G1Projective;
 //     type Scalar = Scalar;
 // }
-
+//
 // impl Curve for Bls12381G1 {
 //     type FieldBytesSize = elliptic_curve::generic_array::typenum::U48;
 //     type Uint = elliptic_curve::bigint::U384;

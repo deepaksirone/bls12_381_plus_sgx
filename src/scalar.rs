@@ -8,7 +8,6 @@ use rand_core::RngCore;
 
 use ff::{Field, PrimeField};
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
-use zeroize::{DefaultIsZeroes, Zeroize};
 
 #[cfg(feature = "bits")]
 use core::convert::TryInto;
@@ -76,7 +75,15 @@ impl ConditionallySelectable for Scalar {
     }
 }
 
-impl DefaultIsZeroes for Scalar {}
+#[cfg(feature = "zeroize")]
+impl zeroize::DefaultIsZeroes for Scalar {}
+
+#[cfg(feature = "zeroize")]
+impl zeroize::Zeroize for Scalar {
+    fn zeroize(&mut self) {
+        self.0.zeroize()
+    }
+}
 
 /// Constant representing the modulus
 /// q = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
@@ -235,13 +242,11 @@ impl Default for Scalar {
     }
 }
 
-#[cfg(feature = "zeroize")]
-impl zeroize::DefaultIsZeroes for Scalar {}
-
 impl_serde!(
     Scalar,
     |s: &Scalar| s.to_bytes(),
-    |arr: &[u8; 32]| Scalar::from_bytes(arr),
+    // |arr: &[u8; 32]| Scalar::from_bytes(arr),
+    Scalar::from_bytes,
     32
 );
 

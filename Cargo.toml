@@ -38,10 +38,6 @@ name = "hash_to_curve"
 harness = false
 required-features = ["experimental"]
 
-[dependencies.digest]
-version = "0.10"
-optional = true
-
 [dependencies.elliptic-curve]
 version = "0.13"
 default-features = false
@@ -91,7 +87,6 @@ default = ["groups", "pairings", "alloc", "bits", "hashing"]
 bits = ["ff/bits"]
 expose-fields = ["groups"]
 groups = ["group"]
-hashing = ["digest", "elliptic-curve/hash2curve", "arrayref"]
+hashing = ["elliptic-curve/hash2curve", "arrayref"]
 pairings = ["groups", "pairing"]
 alloc = ["group/alloc"]
-experimental = ["digest"]

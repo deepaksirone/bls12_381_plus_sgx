@@ -18,7 +18,10 @@ use crate::fp::Fp;
 use crate::fp2::Fp2;
 use crate::Scalar;
 #[cfg(feature = "hashing")]
-use elliptic_curve::hash2curve::{ExpandMsg, Sgn0};
+use elliptic_curve::{
+    group::cofactor::CofactorGroup,
+    hash2curve::{ExpandMsg, Sgn0},
+};
 
 /// This is an element of $\mathbb{G}_2$ represented in the affine coordinate space.
 /// It is ideal to keep elements in this representation to reduce memory usage and
@@ -949,21 +952,6 @@ impl G2Projective {
         xself
     }
 
-    /// Clears the cofactor, using [Budroni-Pintore](https://ia.cr/2017/419).
-    /// This is equivalent to multiplying by $h\_\textrm{eff} = 3(z^2 - 1) \cdot
-    /// h_2$, where $h_2$ is the cofactor of $\mathbb{G}\_2$ and $z$ is the
-    /// parameter of BLS12-381.
-    pub fn clear_cofactor(&self) -> G2Projective {
-        let t1 = self.mul_by_x(); // [x] P
-        let t2 = self.psi(); // psi(P)
-
-        self.double().psi2() // psi^2(2P)
-            + (t1 + t2).mul_by_x() // psi^2(2P) + [x^2] P + [x] psi(P)
-            - t1 // psi^2(2P) + [x^2 - x] P + [x] psi(P)
-            - t2 // psi^2(2P) + [x^2 - x] P + [x - 1] psi(P)
-            - self // psi^2(2P) + [x^2 - x - 1] P + [x - 1] psi(P)
-    }
-
     /// Converts a batch of `G2Projective` elements into `G2Affine` elements. This
     /// function will panic if `p.len() != q.len()`.
     pub fn batch_normalize(p: &[Self], q: &mut [G2Affine]) {
@@ -1430,6 +1418,34 @@ impl<'de> serde::Deserialize<'de> for G2Projective {
         D: serde::Deserializer<'de>,
     {
         Ok(G2Projective::from(G2Affine::deserialize(deserializer)?))
+    }
+}
+
+#[cfg(feature = "hashing")]
+impl CofactorGroup for G2Projective {
+    type Subgroup = G2Projective;
+
+    /// Clears the cofactor, using [Budroni-Pintore](https://ia.cr/2017/419).
+    /// This is equivalent to multiplying by $h\_\textrm{eff} = 3(z^2 - 1) \cdot
+    /// h_2$, where $h_2$ is the cofactor of $\mathbb{G}\_2$ and $z$ is the
+    /// parameter of BLS12-381.
+    fn clear_cofactor(&self) -> Self::Subgroup {
+        let t1 = self.mul_by_x(); // [x] P
+        let t2 = self.psi(); // psi(P)
+
+        self.double().psi2() // psi^2(2P)
+            + (t1 + t2).mul_by_x() // psi^2(2P) + [x^2] P + [x] psi(P)
+            - t1 // psi^2(2P) + [x^2 - x] P + [x] psi(P)
+            - t2 // psi^2(2P) + [x^2 - x] P + [x - 1] psi(P)
+            - self // psi^2(2P) + [x^2 - x - 1] P + [x - 1] psi(P)
+    }
+
+    fn into_subgroup(self) -> CtOption<Self::Subgroup> {
+        CtOption::new(self, 1.into())
+    }
+
+    fn is_torsion_free(&self) -> Choice {
+        self.is_on_curve()
     }
 }
 
