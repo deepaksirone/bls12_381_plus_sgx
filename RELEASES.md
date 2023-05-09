@@ -1,3 +1,7 @@
+# 0.8.1
+
+- Fix a serialization issue where is\_torsion\_free was not working for valid points
+
 # 0.8.0
 
 - Bumped dependencies to `ff 0.13`, `group 0.13`, `pairing 0.23`, `elliptic-curve 0.13`
