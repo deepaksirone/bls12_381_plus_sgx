@@ -19,7 +19,7 @@ use elliptic_curve::{
 };
 use ff::Field;
 use rand_core::RngCore;
-use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
+use subtle::{Choice, ConditionallyNegatable, ConditionallySelectable, ConstantTimeEq, CtOption};
 
 use crate::util::{adc, mac, sbb};
 
@@ -233,6 +233,49 @@ impl OsswuMap for Fp {
             0x78c712fbe0ab6e8u64,
         ]),
     };
+
+    fn osswu(&self) -> (Self, Self) {
+        let xd1 = Self::PARAMS.z.mul(&Self::PARAMS.map_a);
+
+        // tv1 = u^2
+        let tv1 = self.square();
+        // tv3 = Z * tv1
+        let tv3 = Self::PARAMS.z * tv1;
+        // tv2 = tv3^2
+        let mut tv2 = tv3.square();
+        // xd = tv2 + tv3
+        let mut xd = tv2 + tv3;
+        // x1n = xd + 1
+        // x1n = x1n * B
+        let x1n = (xd + Fp::ONE) * Self::PARAMS.map_b;
+        // xd = -A * xd
+        xd *= Self::PARAMS.map_a.neg();
+        // xd = CMOV(xd, Z * A, xd == 0)
+        xd.conditional_assign(&xd1, xd.is_zero());
+        // tv2 = xd^2
+        tv2 = xd.square();
+        let gxd = tv2 * xd;
+        tv2 *= Self::PARAMS.map_a;
+        let mut gx1 = (x1n.square() + tv2) * x1n;
+        tv2 = Self::PARAMS.map_b * gxd;
+        gx1 += tv2;
+        let mut tv4 = gxd.square();
+        tv2 = gx1 * gxd;
+        tv4 *= tv2;
+        let y1 = tv4.pow_vartime(arrayref::array_ref![Self::PARAMS.c1, 0, 6]) * tv2;
+        let mut x2n = tv3 * x1n;
+        let mut y2 = y1 * Self::PARAMS.c2 * tv1 * self;
+        tv2 = y1.square() * gxd;
+        let e2 = ((tv2 == gx1) as u8).into();
+
+        x2n.conditional_assign(&x1n, e2);
+        y2.conditional_assign(&y1, e2);
+
+        let e3 = self.sgn0() ^ y2.sgn0();
+        y2.conditional_negate(e3);
+
+        (x2n * xd.invert().unwrap(), y2)
+    }
 }
 
 #[cfg(feature = "hashing")]

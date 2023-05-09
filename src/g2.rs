@@ -485,18 +485,8 @@ impl G2Affine {
         // Updated proof of correctness in https://eprint.iacr.org/2022/352
         //
         // Check that psi(P) == [x] P
-        // let p = G2Projective::from(self);
-        // p.psi().ct_eq(&p.mul_by_x())
-
-        const FQ_MODULUS_BYTES: [u8; 32] = [
-            1, 0, 0, 0, 255, 255, 255, 255, 254, 91, 254, 255, 2, 164, 189, 83, 5, 216, 161, 9, 8,
-            216, 57, 51, 72, 125, 157, 41, 83, 167, 237, 115,
-        ];
-
-        // Clear the r-torsion from the point and check if it is the identity
-        G2Projective::from(*self)
-            .multiply(&FQ_MODULUS_BYTES)
-            .is_identity()
+        let p = G2Projective::from(self);
+        p.psi().ct_eq(&p.mul_by_x())
     }
 
     /// Returns true if this point is on the curve. This should always return

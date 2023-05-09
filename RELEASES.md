@@ -1,3 +1,7 @@
+# 0.8.2
+
+- Fix a bug in hash to g1
+
 # 0.8.1
 
 - Fix a serialization issue where is\_torsion\_free was not working for valid points

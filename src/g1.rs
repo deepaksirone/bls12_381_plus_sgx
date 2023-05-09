@@ -410,19 +410,9 @@ impl G1Affine {
         //
         // Check that endomorphism_p(P) == -[x^2] P
 
-        // let minus_x_squared_times_p = G1Projective::from(self).mul_by_x().mul_by_x().neg();
-        // let endomorphism_p = endomorphism(self);
-        // minus_x_squared_times_p.ct_eq(&G1Projective::from(endomorphism_p))
-
-        const FQ_MODULUS_BYTES: [u8; 32] = [
-            1, 0, 0, 0, 255, 255, 255, 255, 254, 91, 254, 255, 2, 164, 189, 83, 5, 216, 161, 9, 8,
-            216, 57, 51, 72, 125, 157, 41, 83, 167, 237, 115,
-        ];
-
-        // Clear the r-torsion from the point and check if it is the identity
-        G1Projective::from(*self)
-            .multiply(&FQ_MODULUS_BYTES)
-            .is_identity()
+        let minus_x_squared_times_p = G1Projective::from(self).mul_by_x().mul_by_x().neg();
+        let endomorphism_p = endomorphism(self);
+        minus_x_squared_times_p.ct_eq(&G1Projective::from(endomorphism_p))
     }
 
     /// Returns true if this point is on the curve. This should always return
@@ -433,7 +423,6 @@ impl G1Affine {
     }
 }
 
-#[cfg(test)]
 /// A nontrivial third root of unity in Fp
 pub const BETA: Fp = Fp::from_raw_unchecked([
     0x30f1_361b_798a_64e8,
@@ -444,7 +433,6 @@ pub const BETA: Fp = Fp::from_raw_unchecked([
     0x051b_a4ab_241b_6160,
 ]);
 
-#[cfg(test)]
 fn endomorphism(p: &G1Affine) -> G1Affine {
     // Endomorphism of the points on the curve.
     // endomorphism_p(x,y) = (BETA * x, y)
