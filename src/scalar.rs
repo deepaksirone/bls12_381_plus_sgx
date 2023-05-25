@@ -2,7 +2,7 @@
 //! where `q = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001`
 
 use core::convert::TryFrom;
-use core::fmt;
+use core::fmt::{self, Formatter};
 use core::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use rand_core::RngCore;
 
@@ -26,19 +26,14 @@ use crate::util::{adc, mac, sbb};
 pub struct Scalar(pub(crate) [u64; 4]);
 
 impl fmt::Debug for Scalar {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let tmp = self.to_bytes();
-        write!(f, "0x")?;
-        for &b in tmp.iter().rev() {
-            write!(f, "{:02x}", b)?;
-        }
-        Ok(())
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "{:x}", self)
     }
 }
 
 impl fmt::Display for Scalar {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self)
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "{:x}", self)
     }
 }
 
@@ -236,8 +231,8 @@ impl Default for Scalar {
 
 impl_serde!(
     Scalar,
-    |s: &Scalar| s.to_bytes(),
-    Scalar::from_bytes,
+    |s: &Scalar| s.to_le_bytes(),
+    Scalar::from_le_bytes,
     Scalar::BYTES,
     Scalar::HEX_BYTES
 );
@@ -246,7 +241,7 @@ impl Scalar {
     /// Bytes to represent this field
     pub const BYTES: usize = 32;
     /// The number of hex bytes needed
-    const HEX_BYTES: usize = Self::BYTES * 2;
+    pub(crate) const HEX_BYTES: usize = Self::BYTES * 2;
     /// The additive identity.
     pub const ZERO: Scalar = Scalar([0, 0, 0, 0]);
 
@@ -274,9 +269,37 @@ impl Scalar {
         self.add(self)
     }
 
+    /// Attempts to convert a big-endian byte representation of
+    /// a scalar into a `Scalar`, failing if the input is not canonical.
+    pub fn from_be_bytes(bytes: &[u8; 32]) -> CtOption<Self> {
+        let mut tmp = Scalar([0, 0, 0, 0]);
+
+        tmp.0[3] = u64::from_be_bytes(<[u8; 8]>::try_from(&bytes[0..8]).unwrap());
+        tmp.0[2] = u64::from_be_bytes(<[u8; 8]>::try_from(&bytes[8..16]).unwrap());
+        tmp.0[1] = u64::from_be_bytes(<[u8; 8]>::try_from(&bytes[16..24]).unwrap());
+        tmp.0[0] = u64::from_be_bytes(<[u8; 8]>::try_from(&bytes[24..32]).unwrap());
+
+        // Try to subtract the modulus
+        let (_, borrow) = sbb(tmp.0[0], MODULUS.0[0], 0);
+        let (_, borrow) = sbb(tmp.0[1], MODULUS.0[1], borrow);
+        let (_, borrow) = sbb(tmp.0[2], MODULUS.0[2], borrow);
+        let (_, borrow) = sbb(tmp.0[3], MODULUS.0[3], borrow);
+
+        // If the element is smaller than MODULUS then the
+        // subtraction will underflow, producing a borrow value
+        // of 0xffff...ffff. Otherwise, it'll be zero.
+        let is_some = (borrow as u8) & 1;
+
+        // Convert to Montgomery form by computing
+        // (a.R^0 * R^2) / R = a.R
+        tmp *= &R2;
+
+        CtOption::new(tmp, Choice::from(is_some))
+    }
+
     /// Attempts to convert a little-endian byte representation of
     /// a scalar into a `Scalar`, failing if the input is not canonical.
-    pub fn from_bytes(bytes: &[u8; 32]) -> CtOption<Scalar> {
+    pub fn from_le_bytes(bytes: &[u8; 32]) -> CtOption<Self> {
         let mut tmp = Scalar([0, 0, 0, 0]);
 
         tmp.0[0] = u64::from_le_bytes(<[u8; 8]>::try_from(&bytes[0..8]).unwrap());
@@ -304,7 +327,7 @@ impl Scalar {
 
     /// Converts an element of `Scalar` into a byte representation in
     /// little-endian byte order.
-    pub fn to_bytes(&self) -> [u8; 32] {
+    pub fn to_le_bytes(&self) -> [u8; 32] {
         // Turn into canonical form by computing
         // (a.R) / R = a
         let tmp = Scalar::montgomery_reduce(self.0[0], self.0[1], self.0[2], self.0[3], 0, 0, 0, 0);
@@ -314,6 +337,22 @@ impl Scalar {
         res[8..16].copy_from_slice(&tmp.0[1].to_le_bytes());
         res[16..24].copy_from_slice(&tmp.0[2].to_le_bytes());
         res[24..32].copy_from_slice(&tmp.0[3].to_le_bytes());
+
+        res
+    }
+
+    /// Converts an element of `Scalar` into a byte representation in
+    /// big-endian byte order.
+    pub fn to_be_bytes(&self) -> [u8; 32] {
+        // Turn into canonical form by computing
+        // (a.R) / R = a
+        let tmp = Scalar::montgomery_reduce(self.0[0], self.0[1], self.0[2], self.0[3], 0, 0, 0, 0);
+
+        let mut res = [0; 32];
+        res[0..8].copy_from_slice(&tmp.0[3].to_be_bytes());
+        res[8..16].copy_from_slice(&tmp.0[2].to_be_bytes());
+        res[16..24].copy_from_slice(&tmp.0[1].to_be_bytes());
+        res[24..32].copy_from_slice(&tmp.0[0].to_be_bytes());
 
         res
     }
@@ -675,13 +714,13 @@ impl Scalar {
 
 impl From<Scalar> for [u8; 32] {
     fn from(value: Scalar) -> [u8; 32] {
-        value.to_bytes()
+        value.to_le_bytes()
     }
 }
 
 impl<'a> From<&'a Scalar> for [u8; 32] {
     fn from(value: &'a Scalar) -> [u8; 32] {
-        value.to_bytes()
+        value.to_le_bytes()
     }
 }
 
@@ -735,15 +774,15 @@ impl PrimeField for Scalar {
     type Repr = [u8; 32];
 
     fn from_repr(r: Self::Repr) -> CtOption<Self> {
-        Self::from_bytes(&r)
+        Self::from_le_bytes(&r)
     }
 
     fn to_repr(&self) -> Self::Repr {
-        self.to_bytes()
+        self.to_le_bytes()
     }
 
     fn is_odd(&self) -> Choice {
-        Choice::from(self.to_bytes()[0] & 1)
+        Choice::from(self.to_le_bytes()[0] & 1)
     }
 
     const MODULUS: &'static str =
@@ -769,7 +808,7 @@ impl PrimeFieldBits for Scalar {
     type ReprBits = ReprBits;
 
     fn to_le_bits(&self) -> FieldBits<Self::ReprBits> {
-        let bytes = self.to_bytes();
+        let bytes = self.to_le_bytes();
 
         #[cfg(not(target_pointer_width = "64"))]
         let limbs = [
@@ -826,6 +865,28 @@ where
         I: Iterator<Item = T>,
     {
         iter.fold(Self::ONE, |acc, item| acc * item.borrow())
+    }
+}
+
+impl fmt::LowerHex for Scalar {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let tmp = self.to_be_bytes();
+        write!(f, "0x")?;
+        for &b in tmp.iter() {
+            write!(f, "{:02x}", b)?;
+        }
+        Ok(())
+    }
+}
+
+impl fmt::UpperHex for Scalar {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let tmp = self.to_be_bytes();
+        write!(f, "0x")?;
+        for &b in tmp.iter() {
+            write!(f, "{:02X}", b)?;
+        }
+        Ok(())
     }
 }
 
@@ -906,7 +967,7 @@ fn test_equality() {
 #[test]
 fn test_to_bytes() {
     assert_eq!(
-        Scalar::ZERO.to_bytes(),
+        Scalar::ZERO.to_le_bytes(),
         [
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0
@@ -914,7 +975,7 @@ fn test_to_bytes() {
     );
 
     assert_eq!(
-        Scalar::ONE.to_bytes(),
+        Scalar::ONE.to_le_bytes(),
         [
             1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0
@@ -922,7 +983,7 @@ fn test_to_bytes() {
     );
 
     assert_eq!(
-        R2.to_bytes(),
+        R2.to_le_bytes(),
         [
             254, 255, 255, 255, 1, 0, 0, 0, 2, 72, 3, 0, 250, 183, 132, 88, 245, 79, 188, 236, 239,
             79, 140, 153, 111, 5, 197, 172, 89, 177, 36, 24
@@ -930,7 +991,7 @@ fn test_to_bytes() {
     );
 
     assert_eq!(
-        (-&Scalar::ONE).to_bytes(),
+        (-&Scalar::ONE).to_le_bytes(),
         [
             0, 0, 0, 0, 255, 255, 255, 255, 254, 91, 254, 255, 2, 164, 189, 83, 5, 216, 161, 9, 8,
             216, 57, 51, 72, 125, 157, 41, 83, 167, 237, 115
@@ -941,7 +1002,7 @@ fn test_to_bytes() {
 #[test]
 fn test_from_bytes() {
     assert_eq!(
-        Scalar::from_bytes(&[
+        Scalar::from_le_bytes(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0
         ])
@@ -950,7 +1011,7 @@ fn test_from_bytes() {
     );
 
     assert_eq!(
-        Scalar::from_bytes(&[
+        Scalar::from_le_bytes(&[
             1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0
         ])
@@ -959,7 +1020,7 @@ fn test_from_bytes() {
     );
 
     assert_eq!(
-        Scalar::from_bytes(&[
+        Scalar::from_le_bytes(&[
             254, 255, 255, 255, 1, 0, 0, 0, 2, 72, 3, 0, 250, 183, 132, 88, 245, 79, 188, 236, 239,
             79, 140, 153, 111, 5, 197, 172, 89, 177, 36, 24
         ])
@@ -969,7 +1030,7 @@ fn test_from_bytes() {
 
     // -1 should work
     assert!(bool::from(
-        Scalar::from_bytes(&[
+        Scalar::from_le_bytes(&[
             0, 0, 0, 0, 255, 255, 255, 255, 254, 91, 254, 255, 2, 164, 189, 83, 5, 216, 161, 9, 8,
             216, 57, 51, 72, 125, 157, 41, 83, 167, 237, 115
         ])
@@ -978,7 +1039,7 @@ fn test_from_bytes() {
 
     // modulus is invalid
     assert!(bool::from(
-        Scalar::from_bytes(&[
+        Scalar::from_le_bytes(&[
             1, 0, 0, 0, 255, 255, 255, 255, 254, 91, 254, 255, 2, 164, 189, 83, 5, 216, 161, 9, 8,
             216, 57, 51, 72, 125, 157, 41, 83, 167, 237, 115
         ])
@@ -987,21 +1048,21 @@ fn test_from_bytes() {
 
     // Anything larger than the modulus is invalid
     assert!(bool::from(
-        Scalar::from_bytes(&[
+        Scalar::from_le_bytes(&[
             2, 0, 0, 0, 255, 255, 255, 255, 254, 91, 254, 255, 2, 164, 189, 83, 5, 216, 161, 9, 8,
             216, 57, 51, 72, 125, 157, 41, 83, 167, 237, 115
         ])
         .is_none()
     ));
     assert!(bool::from(
-        Scalar::from_bytes(&[
+        Scalar::from_le_bytes(&[
             1, 0, 0, 0, 255, 255, 255, 255, 254, 91, 254, 255, 2, 164, 189, 83, 5, 216, 161, 9, 8,
             216, 58, 51, 72, 125, 157, 41, 83, 167, 237, 115
         ])
         .is_none()
     ));
     assert!(bool::from(
-        Scalar::from_bytes(&[
+        Scalar::from_le_bytes(&[
             1, 0, 0, 0, 255, 255, 255, 255, 254, 91, 254, 255, 2, 164, 189, 83, 5, 216, 161, 9, 8,
             216, 57, 51, 72, 125, 157, 41, 83, 167, 237, 116
         ])
@@ -1157,7 +1218,7 @@ fn test_multiplication() {
 
         let mut tmp2 = Scalar::ZERO;
         for b in cur
-            .to_bytes()
+            .to_le_bytes()
             .iter()
             .rev()
             .flat_map(|byte| (0..8).rev().map(move |i| ((byte >> i) & 1u8) == 1u8))
@@ -1186,7 +1247,7 @@ fn test_squaring() {
 
         let mut tmp2 = Scalar::ZERO;
         for b in cur
-            .to_bytes()
+            .to_le_bytes()
             .iter()
             .rev()
             .flat_map(|byte| (0..8).rev().map(move |i| ((byte >> i) & 1u8) == 1u8))
@@ -1318,7 +1379,7 @@ fn test_from_okm() {
         184, 141, 14, 25, 196, 12, 5, 65, 222, 229, 103, 132, 86, 28, 224, 249, 100, 61, 100, 238,
         234, 250, 153, 140, 126, 148, 80, 19, 66, 92, 178, 14,
     ];
-    let actual = Scalar::from_okm(&okm).to_bytes();
+    let actual = Scalar::from_okm(&okm).to_le_bytes();
     assert_eq!(actual, expected)
 }
 

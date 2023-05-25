@@ -12,7 +12,6 @@ use core::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 use group::{Group, GroupEncoding};
-use heapless::Vec;
 use pairing::{Engine, PairingCurveAffine};
 use rand_core::RngCore;
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
@@ -408,7 +407,7 @@ impl<'a, 'b> Mul<&'b Scalar> for &'a Gt {
         // We skip the leading bit because it's always unset for Fq
         // elements.
         for bit in other
-            .to_bytes()
+            .to_le_bytes()
             .iter()
             .rev()
             .flat_map(|byte| (0..8).rev().map(move |i| Choice::from((byte >> i) & 1u8)))
@@ -643,7 +642,7 @@ impl_serde!(
 /// Requires the `pairing` crate features to be enabled.
 pub struct G2Prepared {
     infinity: Choice,
-    coeffs: Vec<(Fp2, Fp2, Fp2), 68>,
+    coeffs: PairingCoefficients,
 }
 
 impl From<G2Affine> for G2Prepared {
@@ -651,7 +650,7 @@ impl From<G2Affine> for G2Prepared {
         struct Adder {
             cur: G2Projective,
             base: G2Affine,
-            coeffs: Vec<(Fp2, Fp2, Fp2), 68>,
+            coeffs: PairingCoefficients,
         }
 
         impl MillerLoopDriver for Adder {
@@ -660,14 +659,12 @@ impl From<G2Affine> for G2Prepared {
             fn doubling_step(&mut self, _: Self::Output) -> Self::Output {
                 let coeffs = doubling_step(&mut self.cur);
                 self.coeffs
-                    .push(coeffs)
-                    .expect("Not enough allocated space");
+                    .push(coeffs);
             }
             fn addition_step(&mut self, _: Self::Output) -> Self::Output {
                 let coeffs = addition_step(&mut self.cur, &self.base);
                 self.coeffs
-                    .push(coeffs)
-                    .expect("Not enough allocated space");
+                    .push(coeffs);
             }
             fn square_output(_: Self::Output) -> Self::Output {}
             fn conjugate(_: Self::Output) -> Self::Output {}
@@ -680,12 +677,12 @@ impl From<G2Affine> for G2Prepared {
         let mut adder = Adder {
             cur: G2Projective::from(q),
             base: q,
-            coeffs: Vec::new(),
+            coeffs: PairingCoefficients::default(),
         };
 
         miller_loop(&mut adder);
 
-        assert_eq!(adder.coeffs.len(), 68);
+        debug_assert_eq!(adder.coeffs.len(), 68);
 
         G2Prepared {
             infinity: is_identity,
@@ -963,6 +960,40 @@ impl MultiMillerLoop for Bls12 {
 
     fn multi_miller_loop(terms: &[(&Self::G1Affine, &Self::G2Prepared)]) -> Self::Result {
         multi_miller_loop(terms)
+    }
+}
+
+#[derive(Clone, Debug)]
+struct PairingCoefficients {
+    space: [(Fp2, Fp2, Fp2); 68],
+    length: usize,
+}
+
+impl Default for PairingCoefficients {
+    fn default() -> Self {
+        Self {
+            space: [(Fp2::ZERO, Fp2::ZERO, Fp2::ZERO); 68],
+            length: 0,
+        }
+    }
+}
+
+impl core::ops::Index<usize> for PairingCoefficients {
+    type Output = (Fp2, Fp2, Fp2);
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.space[index]
+    }
+}
+
+impl PairingCoefficients {
+    pub fn push(&mut self, coeffs: (Fp2, Fp2, Fp2)) {
+        self.space[self.length] = coeffs;
+        self.length += 1;
+    }
+
+    pub fn len(&self) -> usize {
+        self.length
     }
 }
 

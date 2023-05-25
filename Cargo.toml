@@ -68,9 +68,6 @@ version = "1.0"
 default-features = false
 features = ["serde_derive"]
 
-[dependencies.heapless]
-version = "0.7"
-
 [dependencies.hex]
 version = "0.4"
 default-features = false
