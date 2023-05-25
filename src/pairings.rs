@@ -2,12 +2,13 @@ use crate::fp::Fp;
 use crate::fp12::Fp12;
 use crate::fp2::Fp2;
 use crate::fp6::Fp6;
+use crate::util::decode_hex_byte;
 use crate::{G1Affine, G1Projective, G2Affine, G2Projective, Scalar, BLS_X, BLS_X_IS_NEGATIVE};
 
 use arrayref::array_ref;
 use core::{
     borrow::Borrow,
-    fmt::{self, Display, Formatter},
+    fmt::{self, Display, Formatter, LowerHex, UpperHex},
     iter::Sum,
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
@@ -217,6 +218,26 @@ impl Default for Gt {
 
 impl zeroize::DefaultIsZeroes for Gt {}
 
+impl LowerHex for Gt {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let bytes = self.to_bytes();
+        for &b in bytes.iter() {
+            write!(f, "{:02x}", b)?;
+        }
+        Ok(())
+    }
+}
+
+impl UpperHex for Gt {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let bytes = self.to_bytes();
+        for &b in bytes.iter() {
+            write!(f, "{:02X}", b)?;
+        }
+        Ok(())
+    }
+}
+
 impl Display for Gt {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{:?}", self)
@@ -354,6 +375,19 @@ impl Gt {
                 })
             })
         })
+    }
+
+    /// Attempts to convert a big-endian hex representation of
+    /// a scalar into a `Gt`, failing if the input is not canonical.
+    pub fn from_hex(hex: &str) -> CtOption<Self> {
+        let bytes = hex.as_bytes();
+        let mut buf = [0u8; Self::BYTES];
+        let mut i = 0;
+        while i < Self::BYTES {
+            buf[i] = decode_hex_byte([bytes[i * 2], bytes[i * 2 + 1]]);
+            i += 1;
+        }
+        Self::from_bytes(&buf)
     }
 }
 
@@ -658,13 +692,11 @@ impl From<G2Affine> for G2Prepared {
 
             fn doubling_step(&mut self, _: Self::Output) -> Self::Output {
                 let coeffs = doubling_step(&mut self.cur);
-                self.coeffs
-                    .push(coeffs);
+                self.coeffs.push(coeffs);
             }
             fn addition_step(&mut self, _: Self::Output) -> Self::Output {
                 let coeffs = addition_step(&mut self.cur, &self.base);
-                self.coeffs
-                    .push(coeffs);
+                self.coeffs.push(coeffs);
             }
             fn square_output(_: Self::Output) -> Self::Output {}
             fn conjugate(_: Self::Output) -> Self::Output {}
@@ -1163,4 +1195,13 @@ fn serialization() {
     assert!(res.is_ok());
     let t2 = res.unwrap();
     assert_eq!(t1, t2);
+}
+
+#[test]
+fn test_hex() {
+    let s1 = Gt::generator();
+    let hex = format!("{:x}", s1);
+    let s2 = Gt::from_hex(&hex);
+    assert_eq!(s2.is_some().unwrap_u8(), 1u8);
+    assert_eq!(s1, s2.unwrap());
 }

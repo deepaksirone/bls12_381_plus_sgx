@@ -15,7 +15,7 @@ use core::convert::TryInto;
 #[cfg(feature = "bits")]
 use ff::{FieldBits, PrimeFieldBits};
 
-use crate::util::{adc, mac, sbb};
+use crate::util::{adc, decode_hex_byte, mac, sbb};
 
 /// Represents an element of the scalar field $\mathbb{F}_q$ of the BLS12-381 elliptic
 /// curve construction.
@@ -355,6 +355,34 @@ impl Scalar {
         res[24..32].copy_from_slice(&tmp.0[0].to_be_bytes());
 
         res
+    }
+
+    /// Create a new [`Scalar`] from the provided big endian hex string.
+    pub fn from_be_hex(hex: &str) -> CtOption<Self> {
+        let bytes = hex.as_bytes();
+        let mut buf = [0u8; Self::BYTES];
+        let mut i = 0;
+
+        while i < Self::BYTES {
+            buf[i] = decode_hex_byte([bytes[i * 2], bytes[i * 2 + 1]]);
+
+            i += 1;
+        }
+        Self::from_be_bytes(&buf)
+    }
+
+    /// Create a new [`Scalar`] from the provided little endian hex string.
+    pub fn from_le_hex(hex: &str) -> CtOption<Self> {
+        let bytes = hex.as_bytes();
+        let mut buf = [0u8; Self::BYTES];
+        let mut i = 0;
+
+        while i < Self::BYTES {
+            buf[i] = decode_hex_byte([bytes[i * 2], bytes[i * 2 + 1]]);
+
+            i += 1;
+        }
+        Self::from_le_bytes(&buf)
     }
 
     /// Converts a 512-bit little endian integer into
@@ -871,7 +899,6 @@ where
 impl fmt::LowerHex for Scalar {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let tmp = self.to_be_bytes();
-        write!(f, "0x")?;
         for &b in tmp.iter() {
             write!(f, "{:02x}", b)?;
         }
@@ -882,7 +909,6 @@ impl fmt::LowerHex for Scalar {
 impl fmt::UpperHex for Scalar {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let tmp = self.to_be_bytes();
-        write!(f, "0x")?;
         for &b in tmp.iter() {
             write!(f, "{:02X}", b)?;
         }
@@ -1408,5 +1434,20 @@ fn test_serialization() {
 
     let hex1 = serde_json::to_string(&s1).unwrap();
     let s2: Scalar = serde_json::from_str(&hex1).unwrap();
+    assert_eq!(s1, s2);
+}
+
+#[test]
+fn test_hex() {
+    let s1 = R2;
+    let hex = format!("{:x}", s1);
+    let s2 = Scalar::from_be_hex(&hex);
+    assert_eq!(s2.is_some().unwrap_u8(), 1u8);
+    let s2 = s2.unwrap();
+    assert_eq!(s1, s2);
+    let hex = hex::encode(s1.to_le_bytes());
+    let s2 = Scalar::from_le_hex(&hex);
+    assert_eq!(s2.is_some().unwrap_u8(), 1u8);
+    let s2 = s2.unwrap();
     assert_eq!(s1, s2);
 }

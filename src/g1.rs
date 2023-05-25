@@ -1,7 +1,7 @@
 //! This module provides an implementation of the $\mathbb{G}_1$ group of BLS12-381.
 
 use core::borrow::Borrow;
-use core::fmt;
+use core::fmt::{self, Formatter};
 use core::iter::Sum;
 use core::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use group::{
@@ -15,6 +15,7 @@ use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 use group::WnafGroup;
 
 use crate::fp::Fp;
+use crate::util::decode_hex_byte;
 use crate::Scalar;
 use elliptic_curve::hash2curve::MapToCurve;
 #[cfg(feature = "hashing")]
@@ -43,8 +44,28 @@ impl Default for G1Affine {
 impl zeroize::DefaultIsZeroes for G1Affine {}
 
 impl fmt::Display for G1Affine {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self)
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "{:x}", self)
+    }
+}
+
+impl fmt::LowerHex for G1Affine {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let bytes = self.to_compressed();
+        for &b in bytes.iter() {
+            write!(f, "{:02x}", b)?;
+        }
+        Ok(())
+    }
+}
+
+impl fmt::UpperHex for G1Affine {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let bytes = self.to_compressed();
+        for &b in bytes.iter() {
+            write!(f, "{:02X}", b)?;
+        }
+        Ok(())
     }
 }
 
@@ -395,6 +416,32 @@ impl G1Affine {
         })
     }
 
+    /// Attempts to deserialize a compressed element hex string. See [`notes::serialization`](crate::notes::serialization)
+    /// for details about how group elements are serialized.
+    pub fn from_compressed_hex(hex: &str) -> CtOption<Self> {
+        let bytes = hex.as_bytes();
+        let mut buf = [0u8; Self::COMPRESSED_BYTES];
+        let mut i = 0;
+        while i < Self::COMPRESSED_BYTES {
+            buf[i] = decode_hex_byte([bytes[i * 2], bytes[i * 2 + 1]]);
+            i += 1;
+        }
+        Self::from_compressed(&buf)
+    }
+
+    /// Attempts to deserialize a uncompressed element hex string. See [`notes::serialization`](crate::notes::serialization)
+    /// for details about how group elements are serialized.
+    pub fn from_uncompressed_hex(hex: &str) -> CtOption<Self> {
+        let bytes = hex.as_bytes();
+        let mut buf = [0u8; Self::UNCOMPRESSED_BYTES];
+        let mut i = 0;
+        while i < Self::UNCOMPRESSED_BYTES {
+            buf[i] = decode_hex_byte([bytes[i * 2], bytes[i * 2 + 1]]);
+            i += 1;
+        }
+        Self::from_uncompressed(&buf)
+    }
+
     /// Returns true if this element is the identity (the point at infinity).
     #[inline]
     pub fn is_identity(&self) -> Choice {
@@ -621,6 +668,18 @@ impl<'de> serde::Deserialize<'de> for G1Projective {
         D: serde::Deserializer<'de>,
     {
         Ok(G1Projective::from(G1Affine::deserialize(deserializer)?))
+    }
+}
+
+impl fmt::LowerHex for G1Projective {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{:x}", self.to_affine())
+    }
+}
+
+impl fmt::UpperHex for G1Projective {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{:X}", self.to_affine())
     }
 }
 
@@ -1964,4 +2023,17 @@ fn test_serialization() {
     let p2: G1Affine = serde_json::from_str(&s).unwrap();
 
     assert_eq!(p1, p2);
+}
+
+#[test]
+fn test_hex() {
+    let g1 = G1Projective::GENERATOR;
+    let hex = format!("{:x}", g1);
+    let g2 = G1Affine::from_compressed_hex(&hex).map(G1Projective::from);
+    assert_eq!(g2.is_some().unwrap_u8(), 1u8);
+    assert_eq!(g1, g2.unwrap());
+    let hex = hex::encode(g1.to_affine().to_uncompressed().as_ref());
+    let g2 = G1Affine::from_uncompressed_hex(&hex).map(G1Projective::from);
+    assert_eq!(g2.is_some().unwrap_u8(), 1u8);
+    assert_eq!(g1, g2.unwrap());
 }

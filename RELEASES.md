@@ -1,3 +1,9 @@
+# 0.8.3
+
+- Add LowerHex and UpperHex impls for G1Affine, G1Projective, G2Affine, G2Projective, Gt, Scalar
+- Add from hex methods for G1Affine, G1Projective, G2Affine, G2Projective, Gt, Scalar
+- Removed heapless dependency
+
 # 0.8.2
 
 - Fix a bug in hash to g1

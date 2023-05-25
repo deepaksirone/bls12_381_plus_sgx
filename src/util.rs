@@ -19,6 +19,32 @@ pub const fn mac(a: u64, b: u64, c: u64, carry: u64) -> (u64, u64) {
     (ret as u64, (ret >> 64) as u64)
 }
 
+/// Decode a single byte encoded as two hexadecimal characters.
+pub const fn decode_hex_byte(bytes: [u8; 2]) -> u8 {
+    let mut i = 0;
+    let mut result = 0u8;
+
+    while i < 2 {
+        result <<= 4;
+        result |= match bytes[i] {
+            b @ b'0'..=b'9' => b - b'0',
+            b @ b'a'..=b'f' => 10 + b - b'a',
+            b @ b'A'..=b'F' => 10 + b - b'A',
+            b => {
+                assert!(
+                    matches!(b, b'0'..=b'9' | b'a' ..= b'f' | b'A'..=b'F'),
+                    "invalid hex byte"
+                );
+                0
+            }
+        };
+
+        i += 1;
+    }
+
+    result
+}
+
 macro_rules! impl_add_binop_specify_output {
     ($lhs:ident, $rhs:ident, $output:ident) => {
         impl<'b> Add<&'b $rhs> for $lhs {
