@@ -15,7 +15,7 @@ use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 use group::WnafGroup;
 
 use crate::fp::Fp;
-use crate::util::decode_hex_byte;
+use crate::util::decode_hex_into_slice;
 use crate::Scalar;
 use elliptic_curve::hash2curve::MapToCurve;
 #[cfg(feature = "hashing")]
@@ -419,26 +419,16 @@ impl G1Affine {
     /// Attempts to deserialize a compressed element hex string. See [`notes::serialization`](crate::notes::serialization)
     /// for details about how group elements are serialized.
     pub fn from_compressed_hex(hex: &str) -> CtOption<Self> {
-        let bytes = hex.as_bytes();
         let mut buf = [0u8; Self::COMPRESSED_BYTES];
-        let mut i = 0;
-        while i < Self::COMPRESSED_BYTES {
-            buf[i] = decode_hex_byte([bytes[i * 2], bytes[i * 2 + 1]]);
-            i += 1;
-        }
+        decode_hex_into_slice(&mut buf, hex.as_bytes());
         Self::from_compressed(&buf)
     }
 
     /// Attempts to deserialize a uncompressed element hex string. See [`notes::serialization`](crate::notes::serialization)
     /// for details about how group elements are serialized.
     pub fn from_uncompressed_hex(hex: &str) -> CtOption<Self> {
-        let bytes = hex.as_bytes();
         let mut buf = [0u8; Self::UNCOMPRESSED_BYTES];
-        let mut i = 0;
-        while i < Self::UNCOMPRESSED_BYTES {
-            buf[i] = decode_hex_byte([bytes[i * 2], bytes[i * 2 + 1]]);
-            i += 1;
-        }
+        decode_hex_into_slice(&mut buf, hex.as_bytes());
         Self::from_uncompressed(&buf)
     }
 
@@ -723,12 +713,6 @@ impl G1Projective {
         z: Fp::ZERO,
     };
 
-    /// Returns the identity of the group: the point at infinity.
-    #[deprecated(since = "0.5.5", note = "Use IDENTITY instead.")]
-    pub fn identity() -> G1Projective {
-        Self::IDENTITY
-    }
-
     /// The fixed generator of the group. See [`notes::design`](notes/design/index.html#fixed-generators)
     /// for how this generator is chosen.
     pub const GENERATOR: Self = Self {
@@ -750,13 +734,6 @@ impl G1Projective {
         ]),
         z: Fp::ONE,
     };
-
-    /// Returns a fixed generator of the group. See [`notes::design`](notes/design/index.html#fixed-generators)
-    /// for how this generator is chosen.
-    #[deprecated(since = "0.5.5", note = "Use GENERATOR instead.")]
-    pub fn generator() -> G1Projective {
-        Self::GENERATOR
-    }
 
     /// Computes the doubling of this point.
     pub fn double(&self) -> G1Projective {

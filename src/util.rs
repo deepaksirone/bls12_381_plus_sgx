@@ -19,6 +19,15 @@ pub const fn mac(a: u64, b: u64, c: u64, carry: u64) -> (u64, u64) {
     (ret as u64, (ret >> 64) as u64)
 }
 
+pub fn decode_hex_into_slice(buffer: &mut [u8], bytes: &[u8]) {
+    debug_assert_eq!(buffer.len(), bytes.len() / 2);
+    let mut i = 0;
+    while i < buffer.len() {
+        buffer[i] = decode_hex_byte([bytes[2 * i], bytes[2 * i + 1]]);
+        i += 1;
+    }
+}
+
 /// Decode a single byte encoded as two hexadecimal characters.
 pub const fn decode_hex_byte(bytes: [u8; 2]) -> u8 {
     let mut i = 0;

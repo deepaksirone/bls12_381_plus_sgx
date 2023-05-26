@@ -51,7 +51,7 @@ pub mod notes {
 
 mod scalar;
 
-pub use scalar::Scalar;
+pub use scalar::{Scalar, ScalarLe};
 
 #[cfg(all(feature = "groups", not(feature = "expose-fields")))]
 mod fp;

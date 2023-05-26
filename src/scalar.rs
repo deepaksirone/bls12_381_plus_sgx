@@ -15,7 +15,7 @@ use core::convert::TryInto;
 #[cfg(feature = "bits")]
 use ff::{FieldBits, PrimeFieldBits};
 
-use crate::util::{adc, decode_hex_byte, mac, sbb};
+use crate::util::{adc, decode_hex_into_slice, mac, sbb};
 
 /// Represents an element of the scalar field $\mathbb{F}_q$ of the BLS12-381 elliptic
 /// curve construction.
@@ -231,8 +231,8 @@ impl Default for Scalar {
 
 impl_serde!(
     Scalar,
-    |s: &Scalar| s.to_le_bytes(),
-    Scalar::from_le_bytes,
+    |s: &Scalar| s.to_be_bytes(),
+    Scalar::from_be_bytes,
     Scalar::BYTES,
     Scalar::HEX_BYTES
 );
@@ -247,20 +247,6 @@ impl Scalar {
 
     /// The multiplicative identity.
     pub const ONE: Scalar = R;
-
-    /// Returns zero, the additive identity.
-    #[inline]
-    #[deprecated(since = "0.5.4", note = "Use ZERO instead.")]
-    pub const fn zero() -> Scalar {
-        Scalar([0, 0, 0, 0])
-    }
-
-    /// Returns one, the multiplicative identity.
-    #[inline]
-    #[deprecated(since = "0.5.4", note = "Use ONE instead.")]
-    pub const fn one() -> Scalar {
-        R
-    }
 
     /// Doubles this field element.
     #[inline]
@@ -359,29 +345,15 @@ impl Scalar {
 
     /// Create a new [`Scalar`] from the provided big endian hex string.
     pub fn from_be_hex(hex: &str) -> CtOption<Self> {
-        let bytes = hex.as_bytes();
         let mut buf = [0u8; Self::BYTES];
-        let mut i = 0;
-
-        while i < Self::BYTES {
-            buf[i] = decode_hex_byte([bytes[i * 2], bytes[i * 2 + 1]]);
-
-            i += 1;
-        }
+        decode_hex_into_slice(&mut buf, hex.as_bytes());
         Self::from_be_bytes(&buf)
     }
 
     /// Create a new [`Scalar`] from the provided little endian hex string.
     pub fn from_le_hex(hex: &str) -> CtOption<Self> {
-        let bytes = hex.as_bytes();
         let mut buf = [0u8; Self::BYTES];
-        let mut i = 0;
-
-        while i < Self::BYTES {
-            buf[i] = decode_hex_byte([bytes[i * 2], bytes[i * 2 + 1]]);
-
-            i += 1;
-        }
+        decode_hex_into_slice(&mut buf, hex.as_bytes());
         Self::from_le_bytes(&buf)
     }
 
@@ -916,6 +888,74 @@ impl fmt::UpperHex for Scalar {
     }
 }
 
+/// A helper trait for serializing Scalars as little-endian instead
+/// of big endian.
+///
+/// ```
+/// use bls12_381_plus::{Scalar, ScalarLe};
+/// use serde::{Serialize, Deserialize};
+///
+/// #[derive(Serialize, Deserialize)]
+/// pub struct TestStruct {
+///     #[serde(with = "ScalarLe")]
+///     scalar: Scalar,
+/// }
+///
+/// let s = Scalar::from_raw([3u64, 3u64, 3u64, 3u64]);
+/// let t = TestStruct { scalar: s };
+///
+/// let ser1 = serde_json::to_string(&t).unwrap();
+/// let ser2 = serde_json::to_string(&s).unwrap();
+///
+/// assert_eq!(ser1, "{\"scalar\":\"0300000000000000030000000000000003000000000000000300000000000000\"}");
+/// assert_eq!(ser2, "\"0000000000000003000000000000000300000000000000030000000000000003\"");
+/// ```
+pub trait ScalarLe: Sized {
+    /// Serialize scalar as little-endian
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error>;
+
+    /// Deserialize into scalar from little-endian
+    fn deserialize<'de, D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error>;
+}
+
+impl ScalarLe for Scalar {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        let bytes = self.to_le_bytes();
+        if s.is_human_readable() {
+            use serde::Serialize;
+
+            let mut hexits = [0u8; 64];
+            hex::encode_to_slice(bytes, &mut hexits).unwrap();
+            let h = core::str::from_utf8(&hexits).unwrap();
+            h.serialize(s)
+        } else {
+            use serde::ser::SerializeTuple;
+
+            let mut tupler = s.serialize_tuple(bytes.len())?;
+            for byte in bytes.iter() {
+                tupler.serialize_element(byte)?;
+            }
+            tupler.end()
+        }
+    }
+
+    fn deserialize<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        use serde::Deserialize;
+
+        if d.is_human_readable() {
+            let hex_str = <&str>::deserialize(d)?;
+            let mut bytes = [0u8; 32];
+            hex::decode_to_slice(hex_str, &mut bytes).unwrap();
+            Option::<Scalar>::from(Self::from_le_bytes(&bytes))
+                .ok_or_else(|| serde::de::Error::custom("invalid scalar"))
+        } else {
+            let bytes = <[u8; 32]>::deserialize(d)?;
+            Option::<Scalar>::from(Self::from_le_bytes(&bytes))
+                .ok_or_else(|| serde::de::Error::custom("invalid scalar"))
+        }
+    }
+}
+
 #[test]
 fn test_constants() {
     assert_eq!(
@@ -1435,6 +1475,27 @@ fn test_serialization() {
     let hex1 = serde_json::to_string(&s1).unwrap();
     let s2: Scalar = serde_json::from_str(&hex1).unwrap();
     assert_eq!(s1, s2);
+}
+
+#[cfg(feature = "alloc")]
+#[test]
+fn test_le_serialize() {
+    {
+        let mut st = alloc::vec::Vec::new();
+        let mut writer = serde_json::Serializer::new(&mut st);
+        ScalarLe::serialize(&Scalar::ONE, &mut writer).unwrap();
+        assert_eq!(
+            st.as_slice(),
+            "\"0100000000000000000000000000000000000000000000000000000000000000\"".as_bytes()
+        );
+    }
+    {
+        let st = serde_json::to_string(&Scalar::ONE).unwrap();
+        assert_eq!(
+            st,
+            "\"0000000000000000000000000000000000000000000000000000000000000001\""
+        );
+    }
 }
 
 #[test]
