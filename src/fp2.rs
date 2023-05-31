@@ -127,35 +127,15 @@ impl Sgn0 for Fp2 {
 
 impl Fp2 {
     /// The additive identity element
-    pub const ZERO: Fp2 = Fp2 {
+    pub const ZERO: Self = Self {
         c0: Fp::ZERO,
         c1: Fp::ZERO,
     };
     /// The multiplicative identity element
-    pub const ONE: Fp2 = Fp2 {
+    pub const ONE: Self = Self {
         c0: Fp::ONE,
         c1: Fp::ZERO,
     };
-
-    /// Return the additive identity element
-    #[inline]
-    #[deprecated(since = "0.5.4", note = "Use ZERO instead.")]
-    pub const fn zero() -> Fp2 {
-        Fp2 {
-            c0: Fp::ZERO,
-            c1: Fp::ZERO,
-        }
-    }
-
-    /// Return the multiplicative identity element
-    #[inline]
-    #[deprecated(since = "0.5.4", note = "Use ONE instead.")]
-    pub const fn one() -> Fp2 {
-        Fp2 {
-            c0: Fp::ONE,
-            c1: Fp::ZERO,
-        }
-    }
 
     /// True if this element is the additive identity
     pub fn is_zero(&self) -> Choice {
@@ -163,7 +143,7 @@ impl Fp2 {
     }
 
     /// Return a random element
-    pub fn random(mut rng: impl RngCore) -> Fp2 {
+    pub fn random(mut rng: impl RngCore) -> Self {
         Fp2 {
             c0: Fp::random(&mut rng),
             c1: Fp::random(&mut rng),
@@ -192,7 +172,7 @@ impl Fp2 {
     /// and because u^2 = -1, we get
     /// (a - b) + (a + b)u
     #[inline(always)]
-    pub fn mul_by_nonresidue(&self) -> Fp2 {
+    pub fn mul_by_nonresidue(&self) -> Self {
         Fp2 {
             c0: self.c0 - self.c1,
             c1: self.c0 + self.c1,
@@ -214,7 +194,7 @@ impl Fp2 {
     }
 
     /// Compute the square of this element
-    pub const fn square(&self) -> Fp2 {
+    pub const fn square(&self) -> Self {
         // Complex squaring:
         //
         // v0  = c0 * c1
@@ -237,7 +217,7 @@ impl Fp2 {
         }
     }
 
-    pub fn mul(&self, rhs: &Fp2) -> Fp2 {
+    pub fn mul(&self, rhs: &Fp2) -> Self {
         // F_{p^2} x F_{p^2} multiplication implemented with operand scanning (schoolbook)
         // computes the result as:
         //
@@ -257,7 +237,7 @@ impl Fp2 {
     }
 
     /// Add self + rhs
-    pub const fn add(&self, rhs: &Fp2) -> Fp2 {
+    pub const fn add(&self, rhs: &Fp2) -> Self {
         Fp2 {
             c0: (&self.c0).add(&rhs.c0),
             c1: (&self.c1).add(&rhs.c1),
@@ -265,15 +245,15 @@ impl Fp2 {
     }
 
     /// Subtract self - rhs
-    pub const fn sub(&self, rhs: &Fp2) -> Fp2 {
-        Fp2 {
+    pub const fn sub(&self, rhs: &Fp2) -> Self {
+        Self {
             c0: (&self.c0).sub(&rhs.c0),
             c1: (&self.c1).sub(&rhs.c1),
         }
     }
 
     /// Negate this element
-    pub const fn neg(&self) -> Fp2 {
+    pub const fn neg(&self) -> Self {
         Fp2 {
             c0: (&self.c0).neg(),
             c1: (&self.c1).neg(),
@@ -281,7 +261,7 @@ impl Fp2 {
     }
 
     /// Double this element
-    pub const fn double(&self) -> Fp2 {
+    pub const fn double(&self) -> Self {
         Fp2 {
             c0: self.c0.double(),
             c1: self.c1.double(),
@@ -392,7 +372,7 @@ impl Fp2 {
     }
 
     #[cfg(feature = "hashing")]
-    pub(crate) fn hash<X>(msg: &[u8], dst: &[u8]) -> [Fp2; 2]
+    pub(crate) fn hash<X>(msg: &[u8], dst: &[u8]) -> [Self; 2]
     where
         X: for<'a> ExpandMsg<'a>,
     {
@@ -407,7 +387,7 @@ impl Fp2 {
     }
 
     #[cfg(feature = "hashing")]
-    pub(crate) fn encode<X>(msg: &[u8], dst: &[u8]) -> Fp2
+    pub(crate) fn encode<X>(msg: &[u8], dst: &[u8]) -> Self
     where
         X: for<'a> ExpandMsg<'a>,
     {

@@ -258,6 +258,7 @@ fn hash_to_curve_g1_ro() {
     }
 }
 
+#[cfg(feature = "hashing")]
 #[test]
 fn encode_to_curve_g1() {
     //suite   = BLS12381G1_XMD:SHA-256_SSWU_NU_
@@ -281,6 +282,7 @@ fn encode_to_curve_g1() {
     }
 }
 
+#[cfg(feature = "hashing")]
 #[test]
 fn hash_to_curve_g2_ro() {
     //suite   = BLS12381G2_XMD:SHA-256_SSWU_RO_
@@ -304,6 +306,7 @@ fn hash_to_curve_g2_ro() {
     }
 }
 
+#[cfg(feature = "hashing")]
 #[test]
 fn encode_to_curve_g2() {
     //suite   = BLS12381G2_XMD:SHA-256_SSWU_NU_

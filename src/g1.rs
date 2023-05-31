@@ -17,9 +17,8 @@ use group::WnafGroup;
 use crate::fp::Fp;
 use crate::util::decode_hex_into_slice;
 use crate::Scalar;
-use elliptic_curve::hash2curve::MapToCurve;
 #[cfg(feature = "hashing")]
-use elliptic_curve::{group::cofactor::CofactorGroup, hash2curve::ExpandMsg};
+use elliptic_curve::{group::cofactor::CofactorGroup, hash2curve::{ExpandMsg, MapToCurve}};
 
 /// This is an element of $\mathbb{G}_1$ represented in the affine coordinate space.
 /// It is ideal to keep elements in this representation to reduce memory usage and

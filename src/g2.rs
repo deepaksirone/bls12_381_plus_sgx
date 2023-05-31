@@ -2446,7 +2446,6 @@ fn test_commutative_scalar_subgroup_multiplication() {
 }
 
 #[cfg(feature = "hashing")]
-#[ignore]
 #[test]
 fn test_hash() {
     use elliptic_curve::hash2curve::ExpandMsgXmd;
