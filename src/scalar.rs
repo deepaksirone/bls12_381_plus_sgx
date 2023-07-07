@@ -11,7 +11,16 @@ use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
 #[cfg(feature = "bits")]
 use core::convert::TryInto;
+use elliptic_curve::{
+    bigint::{ArrayEncoding, Encoding, U256, U384, U512},
+    consts::{U32, U48, U64},
+    generic_array::GenericArray,
+    ops::{Invert, Reduce},
+    scalar::{FromUintUnchecked, IsHigh},
+    ScalarPrimitive,
+};
 
+use crate::Bls12381G1;
 #[cfg(feature = "bits")]
 use ff::{FieldBits, PrimeFieldBits};
 
@@ -34,6 +43,12 @@ impl fmt::Debug for Scalar {
 impl fmt::Display for Scalar {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "{:x}", self)
+    }
+}
+
+impl From<u32> for Scalar {
+    fn from(val: u32) -> Self {
+        Scalar([val as u64, 0, 0, 0]) * R2
     }
 }
 
@@ -71,6 +86,14 @@ impl ConditionallySelectable for Scalar {
 }
 
 impl zeroize::DefaultIsZeroes for Scalar {}
+
+/// q >> 1 = 39f6d3a994cebea4199cec0404d0ec02a9ded2017fff2dff7fffffff80000000
+const HALF_MODULUS: Scalar = Scalar([
+    0x7fff_ffff_8000_0000,
+    0xa9de_d201_7fff_2dff,
+    0x199c_ec04_04d0_ec02,
+    0x39f6_d3a9_94ce_bea4,
+]);
 
 /// Constant representing the modulus
 /// q = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
@@ -421,6 +444,12 @@ impl Scalar {
         (&Scalar(val)).mul(&R2)
     }
 
+    /// Converts this `Scalar` into an integer represented in little endian
+    pub const fn to_raw(&self) -> [u64; 4] {
+        let tmp = Scalar::montgomery_reduce(self.0[0], self.0[1], self.0[2], self.0[3], 0, 0, 0, 0);
+        tmp.0
+    }
+
     /// Squares this element.
     #[inline]
     pub const fn square(&self) -> Scalar {
@@ -710,6 +739,21 @@ impl Scalar {
 
         Scalar([d0 & mask, d1 & mask, d2 & mask, d3 & mask])
     }
+
+    /// Hashes the input messages and domain separation tag to a `Scalar`
+    #[cfg(feature = "hashing")]
+    pub fn hash<X>(msg: &[u8], dst: &[u8]) -> Self
+    where
+        X: for<'a> elliptic_curve::hash2curve::ExpandMsg<'a>,
+    {
+        use elliptic_curve::hash2curve::Expander;
+
+        let d = [dst];
+        let mut expander = X::expand_message(&[msg], &d, 48).unwrap();
+        let mut out = [0u8; 48];
+        expander.fill_bytes(&mut out);
+        Scalar::from_okm(&out)
+    }
 }
 
 impl From<Scalar> for [u8; 32] {
@@ -795,6 +839,12 @@ impl PrimeField for Scalar {
     const ROOT_OF_UNITY: Self = ROOT_OF_UNITY;
     const ROOT_OF_UNITY_INV: Self = ROOT_OF_UNITY_INV;
     const DELTA: Self = DELTA;
+}
+
+impl AsRef<Scalar> for Scalar {
+    fn as_ref(&self) -> &Scalar {
+        self
+    }
 }
 
 #[cfg(all(feature = "bits", not(target_pointer_width = "64")))]
@@ -956,6 +1006,196 @@ impl ScalarLe for Scalar {
     }
 }
 
+impl From<ScalarPrimitive<Bls12381G1>> for Scalar {
+    fn from(value: ScalarPrimitive<Bls12381G1>) -> Self {
+        Self::from_uint_unchecked(*value.as_uint())
+    }
+}
+
+impl From<&ScalarPrimitive<Bls12381G1>> for Scalar {
+    fn from(value: &ScalarPrimitive<Bls12381G1>) -> Self {
+        Self::from_uint_unchecked(*value.as_uint())
+    }
+}
+
+impl From<Scalar> for ScalarPrimitive<Bls12381G1> {
+    fn from(value: Scalar) -> Self {
+        ScalarPrimitive::from(&value)
+    }
+}
+
+impl From<&Scalar> for ScalarPrimitive<Bls12381G1> {
+    fn from(value: &Scalar) -> Self {
+        let mut out = [0u64; 6];
+        out[..4].copy_from_slice(&value.to_raw());
+        ScalarPrimitive::new(U384::from_words(out)).unwrap()
+    }
+}
+
+impl From<GenericArray<u8, U48>> for Scalar {
+    fn from(value: GenericArray<u8, U48>) -> Self {
+        Self::from_uint_unchecked(U384::from_be_byte_array(value))
+    }
+}
+
+impl From<Scalar> for GenericArray<u8, U48> {
+    fn from(value: Scalar) -> Self {
+        let mut arr = GenericArray::<u8, U48>::default();
+        arr[16..].copy_from_slice(&value.to_be_bytes());
+        arr
+    }
+}
+
+impl From<GenericArray<u8, U32>> for Scalar {
+    fn from(value: GenericArray<u8, U32>) -> Self {
+        let arr: [u8; 32] = <[u8; 32]>::try_from(value.as_slice()).unwrap();
+        Self::from_be_bytes(&arr).unwrap()
+    }
+}
+
+impl From<Scalar> for GenericArray<u8, U32> {
+    fn from(value: Scalar) -> Self {
+        GenericArray::clone_from_slice(&value.to_be_bytes())
+    }
+}
+
+impl From<U256> for Scalar {
+    fn from(value: U256) -> Self {
+        Self::reduce(value)
+    }
+}
+
+impl From<Scalar> for U256 {
+    fn from(value: Scalar) -> Self {
+        let mut arr = value.to_raw();
+        arr.reverse();
+        U256::from_words(arr)
+    }
+}
+
+impl From<U384> for Scalar {
+    fn from(value: U384) -> Self {
+        Self::from_uint_unchecked(value)
+    }
+}
+
+impl From<Scalar> for U384 {
+    fn from(value: Scalar) -> Self {
+        let raw = value.to_raw();
+        let arr = [0u64, 0u64, raw[3], raw[2], raw[1], raw[0]];
+        U384::from_words(arr)
+    }
+}
+
+impl From<U512> for Scalar {
+    fn from(value: U512) -> Self {
+        Self::reduce(value)
+    }
+}
+
+impl From<Scalar> for U512 {
+    fn from(value: Scalar) -> Self {
+        let raw = value.to_raw();
+        let arr = [0u64, 0u64, 0u64, 0u64, raw[3], raw[2], raw[1], raw[0]];
+        U512::from_words(arr)
+    }
+}
+
+impl FromUintUnchecked for Scalar {
+    type Uint = U384;
+
+    fn from_uint_unchecked(uint: Self::Uint) -> Self {
+        let mut out = [0u64; 4];
+        out.copy_from_slice(&uint.as_words()[..4]);
+        Scalar::from_raw(out)
+    }
+}
+
+impl Invert for Scalar {
+    type Output = CtOption<Self>;
+
+    fn invert(&self) -> Self::Output {
+        self.invert()
+    }
+}
+
+impl IsHigh for Scalar {
+    fn is_high(&self) -> Choice {
+        let mut borrow = 0;
+        for i in 0..4 {
+            let (_, b) = sbb(HALF_MODULUS.0[i], self.0[i], borrow);
+            borrow = b;
+        }
+        ((borrow == u64::MAX) as u8).into()
+    }
+}
+
+impl core::ops::Shr<usize> for Scalar {
+    type Output = Self;
+
+    fn shr(self, mut rhs: usize) -> Self::Output {
+        // TODO: look for a more efficient method to do this
+        let mut tmp = self;
+        while rhs > 0 {
+            tmp *= TWO_INV;
+            rhs -= 1;
+        }
+        tmp
+    }
+}
+
+impl core::ops::Shr<usize> for &Scalar {
+    type Output = Scalar;
+
+    fn shr(self, rhs: usize) -> Self::Output {
+        *self >> rhs
+    }
+}
+
+impl core::ops::ShrAssign<usize> for Scalar {
+    fn shr_assign(&mut self, rhs: usize) {
+        *self = *self >> rhs;
+    }
+}
+
+impl Reduce<U256> for Scalar {
+    type Bytes = GenericArray<u8, U32>;
+
+    fn reduce(n: U256) -> Self {
+        let mut out = [0u8; 48];
+        out[..32].copy_from_slice(&n.to_be_bytes());
+        Self::from_okm(&out)
+    }
+
+    fn reduce_bytes(bytes: &Self::Bytes) -> Self {
+        Self::reduce(U256::from_be_byte_array(*bytes))
+    }
+}
+
+impl Reduce<U384> for Scalar {
+    type Bytes = GenericArray<u8, U48>;
+
+    fn reduce(n: U384) -> Self {
+        Self::from_okm(&n.to_be_bytes())
+    }
+
+    fn reduce_bytes(bytes: &Self::Bytes) -> Self {
+        Self::reduce(U384::from_be_byte_array(*bytes))
+    }
+}
+
+impl Reduce<U512> for Scalar {
+    type Bytes = GenericArray<u8, U64>;
+
+    fn reduce(n: U512) -> Self {
+        Self::from_u512(*n.as_words())
+    }
+
+    fn reduce_bytes(bytes: &Self::Bytes) -> Self {
+        Self::reduce(U512::from_be_byte_array(*bytes))
+    }
+}
+
 #[test]
 fn test_constants() {
     assert_eq!(
@@ -963,7 +1203,7 @@ fn test_constants() {
         "0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001",
     );
 
-    assert_eq!(Scalar::from(2) * Scalar::TWO_INV, Scalar::ONE);
+    assert_eq!(Scalar::from(2u64) * Scalar::TWO_INV, Scalar::ONE);
 
     assert_eq!(
         Scalar::ROOT_OF_UNITY * Scalar::ROOT_OF_UNITY_INV,
@@ -1511,4 +1751,17 @@ fn test_hex() {
     assert_eq!(s2.is_some().unwrap_u8(), 1u8);
     let s2 = s2.unwrap();
     assert_eq!(s1, s2);
+}
+
+#[test]
+fn test_shr() {
+    let two = Scalar::ONE + Scalar::ONE;
+    assert_eq!(Scalar::ONE, two >> 1);
+
+    assert_eq!(two, (two + two) >> 1);
+
+    let ninety_six = Scalar::from(96u64);
+    let forty_eight = Scalar::from(48u64);
+    let res = ninety_six >> 1;
+    assert_eq!(forty_eight, res);
 }

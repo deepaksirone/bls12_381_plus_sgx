@@ -17,8 +17,16 @@ use group::WnafGroup;
 use crate::fp::Fp;
 use crate::util::decode_hex_into_slice;
 use crate::Scalar;
+use elliptic_curve::consts::U48;
+use elliptic_curve::generic_array::GenericArray;
+use elliptic_curve::hash2curve::Sgn0;
+use elliptic_curve::ops::{LinearCombination, MulByGenerator};
+use elliptic_curve::point::AffineCoordinates;
 #[cfg(feature = "hashing")]
-use elliptic_curve::{group::cofactor::CofactorGroup, hash2curve::{ExpandMsg, MapToCurve}};
+use elliptic_curve::{
+    group::cofactor::CofactorGroup,
+    hash2curve::{ExpandMsg, MapToCurve},
+};
 
 /// This is an element of $\mathbb{G}_1$ represented in the affine coordinate space.
 /// It is ideal to keep elements in this representation to reduce memory usage and
@@ -203,6 +211,18 @@ const B: Fp = Fp::from_raw_unchecked([
     0x8ec9_733b_bf78_ab2f,
     0x09d6_4551_3d83_de7e,
 ]);
+
+impl AffineCoordinates for G1Affine {
+    type FieldRepr = GenericArray<u8, U48>;
+
+    fn x(&self) -> Self::FieldRepr {
+        GenericArray::<u8, U48>::clone_from_slice(&self.x.to_bytes())
+    }
+
+    fn y_is_odd(&self) -> Choice {
+        self.y.sgn0()
+    }
+}
 
 impl G1Affine {
     /// Bytes to represent this point compressed
@@ -698,6 +718,10 @@ fn mul_by_3b(a: Fp) -> Fp {
     let a = a + a; // 4
     a + a + a // 12
 }
+
+impl MulByGenerator for G1Projective {}
+
+impl LinearCombination for G1Projective {}
 
 impl G1Projective {
     /// Bytes to represent this point compressed
@@ -1749,7 +1773,7 @@ fn test_mul_by_x() {
     };
     assert_eq!(generator.mul_by_x(), generator * x);
 
-    let point = G1Projective::GENERATOR * Scalar::from(42);
+    let point = G1Projective::GENERATOR * Scalar::from(42u64);
     assert_eq!(point.mul_by_x(), point * x);
 }
 
@@ -1799,7 +1823,7 @@ fn test_clear_cofactor() {
 
     // in BLS12-381 the cofactor in G1 can be
     // cleared multiplying by (1-x)
-    let h_eff = Scalar::from(1) + Scalar::from(crate::BLS_X);
+    let h_eff = Scalar::from(1u64) + Scalar::from(crate::BLS_X);
     assert_eq!(point.clear_cofactor(), point * h_eff);
 }
 

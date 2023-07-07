@@ -14,7 +14,7 @@ homepage = "https://github.com/mikelodder7/bls12_381_plus"
 license = "MIT/Apache-2.0"
 name = "bls12_381_plus"
 repository = "https://github.com/mikelodder7/bls12_381_plus"
-version = "0.8.4"
+version = "0.8.5"
 edition = "2021"
 
 [package.metadata.docs.rs]
@@ -36,6 +36,7 @@ required-features = ["groups"]
 
 [dependencies.elliptic-curve]
 version = "0.13"
+features = ["hazmat"]
 default-features = false
 
 [dependencies.ff]

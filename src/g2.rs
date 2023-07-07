@@ -18,6 +18,10 @@ use crate::fp::Fp;
 use crate::fp2::Fp2;
 use crate::util::decode_hex_into_slice;
 use crate::Scalar;
+use elliptic_curve::consts::U96;
+use elliptic_curve::generic_array::GenericArray;
+use elliptic_curve::ops::{LinearCombination, MulByGenerator};
+use elliptic_curve::point::AffineCoordinates;
 #[cfg(feature = "hashing")]
 use elliptic_curve::{
     group::cofactor::CofactorGroup,
@@ -219,6 +223,21 @@ const B: Fp2 = Fp2 {
 };
 
 const B3: Fp2 = Fp2::add(&Fp2::add(&B, &B), &B);
+
+impl AffineCoordinates for G2Affine {
+    type FieldRepr = GenericArray<u8, U96>;
+
+    fn x(&self) -> Self::FieldRepr {
+        let mut res = GenericArray::<u8, U96>::default();
+        res[0..48].copy_from_slice(&self.x.c1.to_bytes()[..]);
+        res[48..96].copy_from_slice(&self.x.c0.to_bytes()[..]);
+        res
+    }
+
+    fn y_is_odd(&self) -> Choice {
+        self.y.sgn0()
+    }
+}
 
 impl G2Affine {
     /// Bytes to represent this point compressed
@@ -702,6 +721,10 @@ impl_binops_multiplicative_mixed!(Scalar, G2Projective, G2Projective);
 fn mul_by_3b(x: Fp2) -> Fp2 {
     x * B3
 }
+
+impl MulByGenerator for G2Projective {}
+
+impl LinearCombination for G2Projective {}
 
 impl G2Projective {
     /// Bytes to represent this point compressed
@@ -2185,7 +2208,7 @@ fn test_mul_by_x() {
     };
     assert_eq!(generator.mul_by_x(), generator * x);
 
-    let point = G2Projective::GENERATOR * Scalar::from(42);
+    let point = G2Projective::GENERATOR * Scalar::from(42u64);
     assert_eq!(point.mul_by_x(), point * x);
 }
 
