@@ -1107,6 +1107,7 @@ impl FromUintUnchecked for Scalar {
     fn from_uint_unchecked(uint: Self::Uint) -> Self {
         let mut out = [0u64; 4];
         out.copy_from_slice(&uint.as_words()[..4]);
+        out.reverse();
         Scalar::from_raw(out)
     }
 }
@@ -1764,4 +1765,22 @@ fn test_shr() {
     let forty_eight = Scalar::from(48u64);
     let res = ninety_six >> 1;
     assert_eq!(forty_eight, res);
+}
+
+#[test]
+fn test_reduce() {
+    let mut t = U384::from_be_hex("0000000000000000000000000000000073eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001");
+    t <<= 2;
+    t = t.wrapping_add(&U384::ONE);
+    let m = Scalar::reduce(t);
+    assert_eq!(m, Scalar::ONE);
+
+    let mut t = U512::from_be_hex("000000000000000000000000000000000000000000000000000000000000000073eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001");
+    t = t.wrapping_mul(&(U512::ONE.wrapping_add(&U512::ONE).wrapping_add(&U512::ONE)));
+    t = t.wrapping_add(&U512::ONE);
+    t = t.wrapping_add(&U512::ONE);
+    t = t.wrapping_add(&U512::ONE);
+
+    let m = Scalar::reduce(t);
+    assert_eq!(m, Scalar::ONE + Scalar::ONE + Scalar::ONE);
 }
