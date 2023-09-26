@@ -389,6 +389,12 @@ impl Gt {
         }
         Self::from_bytes(&buf)
     }
+
+    /// Multiplies two Gt elements together 
+    pub fn product(a: &Self, b: &Self) -> Self {
+        let r = a.0.mul(&b.0);
+        Self (r)
+    }
 }
 
 impl<'a> Neg for &'a Gt {
@@ -432,7 +438,7 @@ impl<'a, 'b> Mul<&'b Scalar> for &'a Gt {
     type Output = Gt;
 
     fn mul(self, other: &'b Scalar) -> Self::Output {
-        let mut acc = Gt::IDENTITY;
+        let mut acc = Gt::IDENTITY; 
 
         // This is a simple double-and-add implementation of group element
         // multiplication, moving from most significant to least
@@ -454,6 +460,39 @@ impl<'a, 'b> Mul<&'b Scalar> for &'a Gt {
         acc
     }
 }
+
+impl Mul<Gt> for Gt {
+    type Output = Self;
+
+    fn mul(self, other: Gt) -> Self {
+        Gt::product(&self, &other)
+    }
+}
+
+impl Mul<&Gt> for Gt {
+    type Output = Self;
+
+    fn mul(self, other: &Gt) -> Self {
+        Gt::product(&self, other)
+    }
+}
+
+impl Mul<Gt> for &Gt {
+    type Output = Gt;
+
+    fn mul(self, other: Gt) -> Gt {
+        Gt::product(&self, &other)
+    }
+}
+
+impl Mul<&Gt> for &Gt {
+    type Output = Gt;
+
+    fn mul(self, other: &Gt) -> Gt {
+        Gt::product(self, other)
+    }
+}
+
 
 impl_binops_additive!(Gt, Gt);
 impl_binops_multiplicative!(Gt, Scalar);
@@ -634,7 +673,7 @@ impl GroupEncoding for Gt {
     }
 }
 
-/// The representation of bytes for GT
+/// The representation of bytes for Gt
 #[derive(Copy, Clone, Debug)]
 pub struct GtRepr([u8; Gt::BYTES]);
 
@@ -1204,4 +1243,54 @@ fn test_hex() {
     let s2 = Gt::from_hex(&hex);
     assert_eq!(s2.is_some().unwrap_u8(), 1u8);
     assert_eq!(s1, s2.unwrap());
+}
+
+#[test]
+fn test_product() {
+    use crate::Scalar;
+    use rand_core::SeedableRng;
+    use rand_xorshift::XorShiftRng;
+
+    // tests Gt * Gt 
+    let s1 = Gt::generator();
+    let s2 = Gt::generator();
+    let s3 = s1 * s2;
+    let s4 = s2 * s1;
+    assert_eq!(s3, s4);
+
+    // test borrowed versions as well 
+
+    let seed = [1u8; 16];
+    let seed_2 = [2u8; 16];
+    let rng_1 = XorShiftRng::from_seed(seed);
+    let rng_2 = XorShiftRng::from_seed(seed_2);
+
+    let t1 = Gt::random(rng_1);
+    let t2 = Gt::random(rng_2);
+
+    let s1 = &t1 * t2;
+    let s2 = t2 * &t1;
+
+    assert_eq!(s1, s2);
+   
+    // test from Scalars, too 
+    
+    let a = Scalar::from_raw([1, 2, 3, 4]).invert().unwrap().square();
+    let b = Scalar::from_raw([5, 6, 7, 8]).invert().unwrap().square();
+
+    let d = G1Affine::from(G1Affine::generator() * a);
+    let e = G2Affine::from(G2Affine::generator() * b);
+    let f = pairing(&d, &e);
+
+    let g = Scalar::from_raw([4, 2, 3, 4]).invert().unwrap().square();
+    let h = Scalar::from_raw([8, 6, 7, 8]).invert().unwrap().square();
+
+    let j = G1Affine::from(G1Affine::generator() * g);
+    let k = G2Affine::from(G2Affine::generator() * h);
+    let l = pairing(&j, &k);
+
+    let product = f * l;
+    let product_2 = pairing(&d, &e) * pairing(&j, &k);
+
+    assert_eq!(product, product_2);
 }

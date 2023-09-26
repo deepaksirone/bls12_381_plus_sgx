@@ -996,6 +996,7 @@ impl G1Projective {
     impl_pippenger_sum_of_products!();
 }
 
+/// Group1 in it's compressed form
 #[derive(Clone, Copy)]
 pub struct G1Compressed([u8; 48]);
 
@@ -1039,6 +1040,7 @@ impl PartialEq for G1Compressed {
     }
 }
 
+/// Group1 in it's Uncompressed from
 #[derive(Clone, Copy)]
 pub struct G1Uncompressed([u8; 96]);
 

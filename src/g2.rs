@@ -1277,6 +1277,7 @@ impl PartialEq for G2Compressed {
     }
 }
 
+/// Group2 in it's uncompressed form
 #[derive(Clone, Copy)]
 pub struct G2Uncompressed([u8; 192]);
 
