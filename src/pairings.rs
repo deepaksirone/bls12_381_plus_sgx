@@ -438,7 +438,7 @@ impl<'a, 'b> Mul<&'b Scalar> for &'a Gt {
     type Output = Gt;
 
     fn mul(self, other: &'b Scalar) -> Self::Output {
-        let mut acc = Gt::IDENTITY; 
+        let mut acc = Gt::IDENTITY;
 
         // This is a simple double-and-add implementation of group element
         // multiplication, moving from most significant to least
