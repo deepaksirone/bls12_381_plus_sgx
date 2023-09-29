@@ -1006,24 +1006,28 @@ impl ScalarLe for Scalar {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl From<ScalarPrimitive<Bls12381G1>> for Scalar {
     fn from(value: ScalarPrimitive<Bls12381G1>) -> Self {
         Self::from_uint_unchecked(*value.as_uint())
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl From<&ScalarPrimitive<Bls12381G1>> for Scalar {
     fn from(value: &ScalarPrimitive<Bls12381G1>) -> Self {
         Self::from_uint_unchecked(*value.as_uint())
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl From<Scalar> for ScalarPrimitive<Bls12381G1> {
     fn from(value: Scalar) -> Self {
         ScalarPrimitive::from(&value)
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl From<&Scalar> for ScalarPrimitive<Bls12381G1> {
     fn from(value: &Scalar) -> Self {
         let mut out = [0u64; 6];
@@ -1032,6 +1036,7 @@ impl From<&Scalar> for ScalarPrimitive<Bls12381G1> {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl From<GenericArray<u8, U48>> for Scalar {
     fn from(value: GenericArray<u8, U48>) -> Self {
         Self::from_uint_unchecked(U384::from_be_byte_array(value))
@@ -1065,6 +1070,7 @@ impl From<U256> for Scalar {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl From<Scalar> for U256 {
     fn from(value: Scalar) -> Self {
         let mut arr = value.to_raw();
@@ -1073,12 +1079,14 @@ impl From<Scalar> for U256 {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl From<U384> for Scalar {
     fn from(value: U384) -> Self {
         Self::from_uint_unchecked(value)
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl From<Scalar> for U384 {
     fn from(value: Scalar) -> Self {
         let raw = value.to_raw();
@@ -1087,12 +1095,14 @@ impl From<Scalar> for U384 {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl From<U512> for Scalar {
     fn from(value: U512) -> Self {
         Self::reduce(value)
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl From<Scalar> for U512 {
     fn from(value: Scalar) -> Self {
         let raw = value.to_raw();
@@ -1101,6 +1111,7 @@ impl From<Scalar> for U512 {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl FromUintUnchecked for Scalar {
     type Uint = U384;
 
@@ -1185,6 +1196,7 @@ impl Reduce<U384> for Scalar {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl Reduce<U512> for Scalar {
     type Bytes = GenericArray<u8, U64>;
 
