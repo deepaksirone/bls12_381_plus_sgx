@@ -1,3 +1,11 @@
+# Release Notes
+
+# 0.8.6
+
+- Add support for `wasm32` targets
+- Add tests for `wasm32-unknown-unknown`
+- Feature gate crate `criterion` for only non `wasm32-unknown-unknown` targets
+
 # 0.8.3
 
 - Add LowerHex and UpperHex impls for G1Affine, G1Projective, G2Affine, G2Projective, Gt, Scalar

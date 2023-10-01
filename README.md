@@ -20,6 +20,20 @@ This crate provides an implementation of the BLS12-381 pairing-friendly elliptic
 
 ## [Documentation](https://docs.rs/bls12_381)
 
+## Testing
+
+Test for non-wasm32 targets:
+
+```sh
+cargo test
+```
+
+Test wasm32 targets:
+
+```sh
+cargo test --target wasm32-unknown-unknown
+```
+
 ## Curve Description
 
 BLS12-381 is a pairing-friendly elliptic curve construction from the [BLS family](https://eprint.iacr.org/2002/088), with embedding degree 12. It is built over a 381-bit prime field `GF(p)` with...

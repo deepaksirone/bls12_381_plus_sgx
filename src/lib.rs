@@ -51,6 +51,8 @@ pub mod notes {
 
 mod scalar;
 
+#[cfg(target_arch = "wasm32")]
+pub use scalar::run_test_wasm;
 pub use scalar::{Scalar, ScalarLe};
 
 #[cfg(all(feature = "groups", not(feature = "expose-fields")))]

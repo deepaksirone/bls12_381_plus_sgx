@@ -1006,21 +1006,18 @@ impl ScalarLe for Scalar {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 impl From<ScalarPrimitive<Bls12381G1>> for Scalar {
     fn from(value: ScalarPrimitive<Bls12381G1>) -> Self {
         Self::from_uint_unchecked(*value.as_uint())
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 impl From<&ScalarPrimitive<Bls12381G1>> for Scalar {
     fn from(value: &ScalarPrimitive<Bls12381G1>) -> Self {
         Self::from_uint_unchecked(*value.as_uint())
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 impl From<Scalar> for ScalarPrimitive<Bls12381G1> {
     fn from(value: Scalar) -> Self {
         ScalarPrimitive::from(&value)
@@ -1036,7 +1033,20 @@ impl From<&Scalar> for ScalarPrimitive<Bls12381G1> {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(target_arch = "wasm32")]
+impl From<&Scalar> for ScalarPrimitive<Bls12381G1> {
+    fn from(value: &Scalar) -> Self {
+        let mut out = [0u32; 12];
+        let arr = value.to_raw();
+        // convert from [u64;4] to [u32;8]
+        for i in 0..4 {
+            out[2 * i] = (arr[i] >> 32) as u32;
+            out[2 * i + 1] = arr[i] as u32;
+        }
+        ScalarPrimitive::new(U384::from_words(out)).unwrap()
+    }
+}
+
 impl From<GenericArray<u8, U48>> for Scalar {
     fn from(value: GenericArray<u8, U48>) -> Self {
         Self::from_uint_unchecked(U384::from_be_byte_array(value))
@@ -1079,7 +1089,21 @@ impl From<Scalar> for U256 {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(target_arch = "wasm32")]
+impl From<Scalar> for U256 {
+    fn from(value: Scalar) -> Self {
+        let arr = value.to_raw();
+        // convert from [u64;4] to [u32;8]
+        let mut arr32 = [0u32; 8];
+        for i in 0..4 {
+            arr32[2 * i] = (arr[i] >> 32) as u32;
+            arr32[2 * i + 1] = arr[i] as u32;
+        }
+        arr32.reverse();
+        U256::from_words(arr32)
+    }
+}
+
 impl From<U384> for Scalar {
     fn from(value: U384) -> Self {
         Self::from_uint_unchecked(value)
@@ -1095,7 +1119,21 @@ impl From<Scalar> for U384 {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(target_arch = "wasm32")]
+impl From<Scalar> for U384 {
+    fn from(value: Scalar) -> Self {
+        let raw = value.to_raw();
+        // convert from [u64;4] to [u32;12]
+        let mut arr = [0u32; 12];
+        for i in 0..4 {
+            arr[2 * i] = (raw[i] >> 32) as u32;
+            arr[2 * i + 1] = raw[i] as u32;
+        }
+        arr.reverse();
+        U384::from_words(arr)
+    }
+}
+
 impl From<U512> for Scalar {
     fn from(value: U512) -> Self {
         Self::reduce(value)
@@ -1111,6 +1149,21 @@ impl From<Scalar> for U512 {
     }
 }
 
+#[cfg(target_arch = "wasm32")]
+impl From<Scalar> for U512 {
+    fn from(value: Scalar) -> Self {
+        let raw = value.to_raw();
+        // convert from [u64;4] to [u32;16]
+        let mut arr = [0u32; 16];
+        for i in 0..4 {
+            arr[2 * i] = (raw[i] >> 32) as u32;
+            arr[2 * i + 1] = raw[i] as u32;
+        }
+        arr.reverse();
+        U512::from_words(arr)
+    }
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 impl FromUintUnchecked for Scalar {
     type Uint = U384;
@@ -1118,6 +1171,22 @@ impl FromUintUnchecked for Scalar {
     fn from_uint_unchecked(uint: Self::Uint) -> Self {
         let mut out = [0u64; 4];
         out.copy_from_slice(&uint.as_words()[..4]);
+        out.reverse();
+        Scalar::from_raw(out)
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl FromUintUnchecked for Scalar {
+    type Uint = U384;
+
+    fn from_uint_unchecked(uint: Self::Uint) -> Self {
+        let mut out = [0u64; 4];
+        let arr = uint.as_words();
+        // convert from [u32;8] to [u64;4]
+        for i in 0..4 {
+            out[i] = (arr[2 * i] as u64) << 32 | arr[2 * i + 1] as u64;
+        }
         out.reverse();
         Scalar::from_raw(out)
     }
@@ -1207,6 +1276,73 @@ impl Reduce<U512> for Scalar {
     fn reduce_bytes(bytes: &Self::Bytes) -> Self {
         Self::reduce(U512::from_be_byte_array(*bytes))
     }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl Reduce<U512> for Scalar {
+    type Bytes = GenericArray<u8, U64>;
+
+    fn reduce(n: U512) -> Self {
+        let mut out = [0u64; 4];
+        let arr = n.as_words();
+        // convert from [u32;8] to [u64;4]
+        for i in 0..4 {
+            out[i] = (arr[2 * i] as u64) << 32 | arr[2 * i + 1] as u64;
+        }
+        out.reverse();
+        Self::from_raw(out)
+    }
+
+    fn reduce_bytes(bytes: &Self::Bytes) -> Self {
+        Self::reduce(U512::from_be_byte_array(*bytes))
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+/// This function gets imported and called by ./tests/wasm.rs to run the same tests this module
+/// runs, only in wasm32.
+pub fn run_test_wasm() {
+    // test all 6 functions with target arch = "wasm32"
+    // They are:
+    // 1. impl From<&Scalar> for ScalarPrimitive<Bls12381G1>
+    // 2. impl From<Scalar> for ScalarPrimitive<Bls12381G1>
+    // 3. impl From<&Scalar> for U384
+    // 4. impl From<Scalar> for U384
+    // 5. impl From<&Scalar> for U512
+    // 6. impl From<Scalar> for U512
+
+    // test 1
+    let s = Scalar::from_raw([1u64, 2u64, 3u64, 4u64]);
+    let s_prim = ScalarPrimitive::from(&s);
+    let s_prim2 = ScalarPrimitive::from(&s);
+    assert_eq!(s_prim, s_prim2);
+
+    // test 2
+    let s = Scalar::from_raw([1u64, 2u64, 3u64, 4u64]);
+    let s_prim = ScalarPrimitive::from(s);
+    let s_prim2 = ScalarPrimitive::from(s);
+    assert_eq!(s_prim, s_prim2);
+
+    // test 3
+    let s = Scalar::from_raw([1u64, 2u64, 3u64, 4u64]);
+
+    let u: &U384 = &s.into();
+    assert_eq!(u, &U384::from(s));
+
+    // test 4
+    let s = Scalar::from_raw([1u64, 2u64, 3u64, 4u64]);
+    let u: U384 = s.into();
+    assert_eq!(u, U384::from(s));
+
+    // test 5
+    let s = Scalar::from_raw([1u64, 2u64, 3u64, 4u64]);
+    let u: &U512 = &s.into();
+    assert_eq!(u, &U512::from(s));
+
+    // test 6
+    let s = Scalar::from_raw([1u64, 2u64, 3u64, 4u64]);
+    let u = U512::from(s);
+    assert_eq!(u, U512::from(s));
 }
 
 #[test]
