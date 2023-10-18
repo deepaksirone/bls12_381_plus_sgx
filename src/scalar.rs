@@ -1140,25 +1140,21 @@ impl FromUintUnchecked for Scalar {
     type Uint = U384;
 
     fn from_uint_unchecked(uint: Self::Uint) -> Self {
+        let mut out = [0u64; 4];
         #[cfg(target_pointer_width = "64")]
         {
-            let mut out = [0u64; 4];
             out.copy_from_slice(&uint.as_words()[..4]);
-            out.reverse();
             Scalar::from_raw(out)
         }
         #[cfg(target_pointer_width = "32")]
         {
-            let mut out = [0u64; 4];
             let words = uint.as_words();
             let mut i = 0;
-            let mut j = 0;
-            while i < words.len() {
-                out[j] = (words[i] as u64) << 32 | words[i] as u64;
+            for index in out.iter_mut() {
+                *index = (words[i + 1] as u64) << 32;
+                *index |= words[i] as u64;
                 i += 2;
-                j += 1;
             }
-            out.reverse();
             Scalar::from_raw(out)
         }
     }
