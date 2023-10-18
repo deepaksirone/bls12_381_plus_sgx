@@ -14,11 +14,14 @@ homepage = "https://github.com/mikelodder7/bls12_381_plus"
 license = "MIT/Apache-2.0"
 name = "bls12_381_plus"
 repository = "https://github.com/mikelodder7/bls12_381_plus"
-version = "0.8.5"
+version = "0.8.6"
 edition = "2021"
 
 [package.metadata.docs.rs]
 rustdoc-args = [ "--html-in-header", "katex-header.html" ]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
 
 [dev-dependencies]
 criterion = "0.5"
@@ -84,3 +87,4 @@ groups = ["group"]
 hashing = ["elliptic-curve/hash2curve"]
 pairings = ["groups", "pairing"]
 alloc = ["group/alloc"]
+std = []
