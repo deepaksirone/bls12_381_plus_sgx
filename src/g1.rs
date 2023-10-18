@@ -758,6 +758,54 @@ impl G1Projective {
         z: Fp::ONE,
     };
 
+    /// Serializes this element into compressed form.
+    pub fn to_compressed(&self) -> [u8; Self::COMPRESSED_BYTES] {
+        self.to_affine().to_compressed()
+    }
+
+    /// Serializes this element into uncompressed form.
+    pub fn to_uncompressed(&self) -> [u8; Self::UNCOMPRESSED_BYTES] {
+        self.to_affine().to_uncompressed()
+    }
+
+    /// Attempts to deserialize an uncompressed element.
+    pub fn from_uncompressed(bytes: &[u8; Self::UNCOMPRESSED_BYTES]) -> CtOption<Self> {
+        G1Affine::from_uncompressed(bytes).map(Into::into)
+    }
+
+    /// Attempts to deserialize an uncompressed element from a hex string.
+    pub fn from_uncompressed_hex(hex: &str) -> CtOption<Self> {
+        G1Affine::from_uncompressed_hex(hex).map(Into::into)
+    }
+
+    /// Attempts to deserialize an uncompressed element, not checking if the
+    /// element is on the curve and not checking if it is in the correct subgroup.
+    ///
+    /// **This is dangerous to call unless you trust the bytes you are reading; otherwise,
+    /// API invariants may be broken.** Please consider using `from_uncompressed()` instead.
+    pub fn from_uncompressed_unchecked(bytes: &[u8; Self::UNCOMPRESSED_BYTES]) -> CtOption<Self> {
+        G1Affine::from_uncompressed_unchecked(bytes).map(Into::into)
+    }
+
+    /// Attempts to deserialize a compressed element.
+    pub fn from_compressed(bytes: &[u8; Self::COMPRESSED_BYTES]) -> CtOption<Self> {
+        G1Affine::from_compressed(bytes).map(Into::into)
+    }
+
+    /// Attempts to deserialize a compressed element from a hex string.
+    pub fn from_compressed_hex(hex: &str) -> CtOption<Self> {
+        G1Affine::from_compressed_hex(hex).map(Into::into)
+    }
+
+    /// Attempts to deserialize an uncompressed element, not checking if the
+    /// element is in the correct subgroup.
+    ///
+    /// **This is dangerous to call unless you trust the bytes you are reading; otherwise,
+    /// API invariants may be broken.** Please consider using `from_compressed()` instead.
+    pub fn from_compressed_unchecked(bytes: &[u8; Self::COMPRESSED_BYTES]) -> CtOption<Self> {
+        G1Affine::from_compressed_unchecked(bytes).map(Into::into)
+    }
+
     /// Computes the doubling of this point.
     pub fn double(&self) -> G1Projective {
         // Algorithm 9, https://eprint.iacr.org/2015/1060.pdf

@@ -299,7 +299,7 @@ impl G2Affine {
 
     /// Serializes this element into compressed form. See [`notes::serialization`](crate::notes::serialization)
     /// for details about how group elements are serialized.
-    pub fn to_compressed(&self) -> [u8; 96] {
+    pub fn to_compressed(&self) -> [u8; Self::COMPRESSED_BYTES] {
         // Strictly speaking, self.x is zero already when self.infinity is true, but
         // to guard against implementation mistakes we do not assume this.
         let x = Fp2::conditional_select(&self.x, &Fp2::ZERO, self.infinity);
@@ -329,7 +329,7 @@ impl G2Affine {
 
     /// Serializes this element into uncompressed form. See [`notes::serialization`](crate::notes::serialization)
     /// for details about how group elements are serialized.
-    pub fn to_uncompressed(&self) -> [u8; 192] {
+    pub fn to_uncompressed(&self) -> [u8; Self::UNCOMPRESSED_BYTES] {
         let mut res = [0; 192];
 
         let x = Fp2::conditional_select(&self.x, &Fp2::ZERO, self.infinity);
@@ -348,7 +348,7 @@ impl G2Affine {
 
     /// Attempts to deserialize an uncompressed element. See [`notes::serialization`](crate::notes::serialization)
     /// for details about how group elements are serialized.
-    pub fn from_uncompressed(bytes: &[u8; 192]) -> CtOption<Self> {
+    pub fn from_uncompressed(bytes: &[u8; Self::UNCOMPRESSED_BYTES]) -> CtOption<Self> {
         Self::from_uncompressed_unchecked(bytes)
             .and_then(|p| CtOption::new(p, p.is_on_curve() & p.is_torsion_free()))
     }
@@ -357,7 +357,7 @@ impl G2Affine {
     /// element is on the curve and not checking if it is in the correct subgroup.
     /// **This is dangerous to call unless you trust the bytes you are reading; otherwise,
     /// API invariants may be broken.** Please consider using `from_uncompressed()` instead.
-    pub fn from_uncompressed_unchecked(bytes: &[u8; 192]) -> CtOption<Self> {
+    pub fn from_uncompressed_unchecked(bytes: &[u8; Self::UNCOMPRESSED_BYTES]) -> CtOption<Self> {
         // Obtain the three flags from the start of the byte sequence
         let compression_flag_set = Choice::from((bytes[0] >> 7) & 1);
         let infinity_flag_set = Choice::from((bytes[0] >> 6) & 1);
@@ -435,7 +435,7 @@ impl G2Affine {
 
     /// Attempts to deserialize a compressed element. See [`notes::serialization`](crate::notes::serialization)
     /// for details about how group elements are serialized.
-    pub fn from_compressed(bytes: &[u8; 96]) -> CtOption<Self> {
+    pub fn from_compressed(bytes: &[u8; Self::COMPRESSED_BYTES]) -> CtOption<Self> {
         // We already know the point is on the curve because this is established
         // by the y-coordinate recovery procedure in from_compressed_unchecked().
 
@@ -446,7 +446,7 @@ impl G2Affine {
     /// element is in the correct subgroup.
     /// **This is dangerous to call unless you trust the bytes you are reading; otherwise,
     /// API invariants may be broken.** Please consider using `from_compressed()` instead.
-    pub fn from_compressed_unchecked(bytes: &[u8; 96]) -> CtOption<Self> {
+    pub fn from_compressed_unchecked(bytes: &[u8; Self::COMPRESSED_BYTES]) -> CtOption<Self> {
         // Obtain the three flags from the start of the byte sequence
         let compression_flag_set = Choice::from((bytes[0] >> 7) & 1);
         let infinity_flag_set = Choice::from((bytes[0] >> 6) & 1);
