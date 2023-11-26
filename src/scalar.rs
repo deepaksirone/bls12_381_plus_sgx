@@ -1027,9 +1027,18 @@ impl From<Scalar> for ScalarPrimitive<Bls12381G1> {
 #[cfg(not(target_arch = "wasm32"))]
 impl From<&Scalar> for ScalarPrimitive<Bls12381G1> {
     fn from(value: &Scalar) -> Self {
-        let mut out = [0u64; 6];
-        out[..4].copy_from_slice(&value.to_raw());
-        ScalarPrimitive::new(U384::from_words(out)).unwrap()
+        #[cfg(target_pointer_width = "64")]
+        {
+            let mut out = [0u64; 6];
+            out[..4].copy_from_slice(&value.to_raw());
+            ScalarPrimitive::new(U384::from_words(out)).unwrap()
+        }
+        #[cfg(target_pointer_width = "32")]
+        {
+            let mut out = [0u32; 12];
+            raw_scalar_to_32bit_le_array(value, &mut out);
+            ScalarPrimitive::new(U384::from_words(out)).unwrap()
+        }
     }
 }
 
@@ -1083,9 +1092,17 @@ impl From<U256> for Scalar {
 #[cfg(not(target_arch = "wasm32"))]
 impl From<Scalar> for U256 {
     fn from(value: Scalar) -> Self {
-        let mut arr = value.to_raw();
-        arr.reverse();
-        U256::from_words(arr)
+        #[cfg(target_pointer_width = "64")]
+        {
+            let arr = value.to_raw();
+            U256::from_words(arr)
+        }
+        #[cfg(target_pointer_width = "32")]
+        {
+            let mut out = [0u32; 8];
+            raw_scalar_to_32bit_le_array(&value, &mut out);
+            U256::from_words(out)
+        }
     }
 }
 
@@ -1113,9 +1130,18 @@ impl From<U384> for Scalar {
 #[cfg(not(target_arch = "wasm32"))]
 impl From<Scalar> for U384 {
     fn from(value: Scalar) -> Self {
-        let raw = value.to_raw();
-        let arr = [0u64, 0u64, raw[3], raw[2], raw[1], raw[0]];
-        U384::from_words(arr)
+        #[cfg(target_pointer_width = "64")]
+        {
+            let raw = value.to_raw();
+            let arr = [0u64, 0u64, raw[3], raw[2], raw[1], raw[0]];
+            U384::from_words(arr)
+        }
+        #[cfg(target_pointer_width = "32")]
+        {
+            let mut arr = [0u32; 12];
+            raw_scalar_to_32bit_le_array(&value, &mut arr);
+            U384::from_words(arr)
+        }
     }
 }
 
@@ -1143,9 +1169,18 @@ impl From<U512> for Scalar {
 #[cfg(not(target_arch = "wasm32"))]
 impl From<Scalar> for U512 {
     fn from(value: Scalar) -> Self {
-        let raw = value.to_raw();
-        let arr = [0u64, 0u64, 0u64, 0u64, raw[3], raw[2], raw[1], raw[0]];
-        U512::from_words(arr)
+        #[cfg(target_pointer_width = "64")]
+        {
+            let raw = value.to_raw();
+            let arr = [0u64, 0u64, 0u64, 0u64, raw[3], raw[2], raw[1], raw[0]];
+            U512::from_words(arr)
+        }
+        #[cfg(target_pointer_width = "32")]
+        {
+            let mut arr = [0u32; 16];
+            raw_scalar_to_32bit_le_array(&value, &mut arr);
+            U512::from_words(arr)
+        }
     }
 }
 
@@ -1170,9 +1205,22 @@ impl FromUintUnchecked for Scalar {
 
     fn from_uint_unchecked(uint: Self::Uint) -> Self {
         let mut out = [0u64; 4];
-        out.copy_from_slice(&uint.as_words()[..4]);
-        out.reverse();
-        Scalar::from_raw(out)
+        #[cfg(target_pointer_width = "64")]
+        {
+            out.copy_from_slice(&uint.as_words()[..4]);
+            Scalar::from_raw(out)
+        }
+        #[cfg(target_pointer_width = "32")]
+        {
+            let words = uint.as_words();
+            let mut i = 0;
+            for index in out.iter_mut() {
+                *index = (words[i + 1] as u64) << 32;
+                *index |= words[i] as u64;
+                i += 2;
+            }
+            Scalar::from_raw(out)
+        }
     }
 }
 
@@ -1270,7 +1318,22 @@ impl Reduce<U512> for Scalar {
     type Bytes = GenericArray<u8, U64>;
 
     fn reduce(n: U512) -> Self {
-        Self::from_u512(*n.as_words())
+        #[cfg(target_pointer_width = "64")]
+        {
+            Self::from_u512(*n.as_words())
+        }
+        #[cfg(target_pointer_width = "32")]
+        {
+            let words = n.as_words();
+            let mut arr = [0u64; 8];
+            let mut i = 0;
+            for index in arr.iter_mut() {
+                *index = (words[i + 1] as u64) << 32;
+                *index |= words[i] as u64;
+                i += 2;
+            }
+            Self::from_u512(arr)
+        }
     }
 
     fn reduce_bytes(bytes: &Self::Bytes) -> Self {
@@ -1345,15 +1408,15 @@ fn test_inv() {
 fn test_debug() {
     assert_eq!(
         format!("{:?}", Scalar::ZERO),
-        "0x0000000000000000000000000000000000000000000000000000000000000000"
+        "0000000000000000000000000000000000000000000000000000000000000000"
     );
     assert_eq!(
         format!("{:?}", Scalar::ONE),
-        "0x0000000000000000000000000000000000000000000000000000000000000001"
+        "0000000000000000000000000000000000000000000000000000000000000001"
     );
     assert_eq!(
         format!("{:?}", R2),
-        "0x1824b159acc5056f998c4fefecbc4ff55884b7fa0003480200000001fffffffe"
+        "1824b159acc5056f998c4fefecbc4ff55884b7fa0003480200000001fffffffe"
     );
 }
 

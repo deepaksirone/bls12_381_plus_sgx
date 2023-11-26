@@ -20,6 +20,9 @@ edition = "2021"
 [package.metadata.docs.rs]
 rustdoc-args = [ "--html-in-header", "katex-header.html" ]
 
+[lib]
+crate-type = ["cdylib", "rlib"]
+
 [dev-dependencies]
 hex = "0.4"
 rand_xorshift = "0.3"
@@ -89,3 +92,4 @@ groups = ["group"]
 hashing = ["elliptic-curve/hash2curve"]
 pairings = ["groups", "pairing"]
 alloc = ["group/alloc"]
+std = []
