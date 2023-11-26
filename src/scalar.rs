@@ -1356,6 +1356,73 @@ fn raw_scalar_to_32bit_le_array(scalar: &Scalar, arr: &mut [u32]) {
     }
 }
 
+#[cfg(target_arch = "wasm32")]
+impl Reduce<U512> for Scalar {
+    type Bytes = GenericArray<u8, U64>;
+
+    fn reduce(n: U512) -> Self {
+        let mut out = [0u64; 4];
+        let arr = n.as_words();
+        // convert from [u32;8] to [u64;4]
+        for i in 0..4 {
+            out[i] = (arr[2 * i] as u64) << 32 | arr[2 * i + 1] as u64;
+        }
+        out.reverse();
+        Self::from_raw(out)
+    }
+
+    fn reduce_bytes(bytes: &Self::Bytes) -> Self {
+        Self::reduce(U512::from_be_byte_array(*bytes))
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+/// This function gets imported and called by ./tests/wasm.rs to run the same tests this module
+/// runs, only in wasm32.
+pub fn run_test_wasm() {
+    // test all 6 functions with target arch = "wasm32"
+    // They are:
+    // 1. impl From<&Scalar> for ScalarPrimitive<Bls12381G1>
+    // 2. impl From<Scalar> for ScalarPrimitive<Bls12381G1>
+    // 3. impl From<&Scalar> for U384
+    // 4. impl From<Scalar> for U384
+    // 5. impl From<&Scalar> for U512
+    // 6. impl From<Scalar> for U512
+
+    // test 1
+    let s = Scalar::from_raw([1u64, 2u64, 3u64, 4u64]);
+    let s_prim = ScalarPrimitive::from(&s);
+    let s_prim2 = ScalarPrimitive::from(&s);
+    assert_eq!(s_prim, s_prim2);
+
+    // test 2
+    let s = Scalar::from_raw([1u64, 2u64, 3u64, 4u64]);
+    let s_prim = ScalarPrimitive::from(s);
+    let s_prim2 = ScalarPrimitive::from(s);
+    assert_eq!(s_prim, s_prim2);
+
+    // test 3
+    let s = Scalar::from_raw([1u64, 2u64, 3u64, 4u64]);
+
+    let u: &U384 = &s.into();
+    assert_eq!(u, &U384::from(s));
+
+    // test 4
+    let s = Scalar::from_raw([1u64, 2u64, 3u64, 4u64]);
+    let u: U384 = s.into();
+    assert_eq!(u, U384::from(s));
+
+    // test 5
+    let s = Scalar::from_raw([1u64, 2u64, 3u64, 4u64]);
+    let u: &U512 = &s.into();
+    assert_eq!(u, &U512::from(s));
+
+    // test 6
+    let s = Scalar::from_raw([1u64, 2u64, 3u64, 4u64]);
+    let u = U512::from(s);
+    assert_eq!(u, U512::from(s));
+}
+
 #[test]
 fn test_constants() {
     assert_eq!(
