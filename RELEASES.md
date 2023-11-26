@@ -1,6 +1,6 @@
 # Release Notes
 
-# 0.8.6
+# 0.8.9
 
 - Add support for `wasm32` targets
 - Add tests for `wasm32-unknown-unknown`
