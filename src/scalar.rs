@@ -1265,6 +1265,19 @@ impl Reduce<U384> for Scalar {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+impl Reduce<U512> for Scalar {
+    type Bytes = GenericArray<u8, U64>;
+
+    fn reduce(n: U512) -> Self {
+        Self::from_u512(*n.as_words())
+    }
+
+    fn reduce_bytes(bytes: &Self::Bytes) -> Self {
+        Self::reduce(U512::from_be_byte_array(*bytes))
+    }
+}
+
 #[cfg(target_pointer_width = "32")]
 fn raw_scalar_to_32bit_le_array(scalar: &Scalar, arr: &mut [u32]) {
     let raw = scalar.to_raw();
@@ -1277,19 +1290,6 @@ fn raw_scalar_to_32bit_le_array(scalar: &Scalar, arr: &mut [u32]) {
 
         i += 2;
         j += 1;
-    }
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-impl Reduce<U512> for Scalar {
-    type Bytes = GenericArray<u8, U64>;
-
-    fn reduce(n: U512) -> Self {
-        Self::from_u512(*n.as_words())
-    }
-
-    fn reduce_bytes(bytes: &Self::Bytes) -> Self {
-        Self::reduce(U512::from_be_byte_array(*bytes))
     }
 }
 
