@@ -1,11 +1,3 @@
-# Release Notes
-
-# 0.8.9
-
-- Add support for `wasm32` targets
-- Add tests for `wasm32-unknown-unknown`
-- Feature gate crate `criterion` for only non `wasm32-unknown-unknown` targets
-
 # 0.8.6
 
 - Added debug_asserts to check lengths
