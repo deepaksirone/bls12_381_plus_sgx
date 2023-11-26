@@ -6,6 +6,11 @@
 - Add tests for `wasm32-unknown-unknown`
 - Feature gate crate `criterion` for only non `wasm32-unknown-unknown` targets
 
+# 0.8.6
+
+- Added debug_asserts to check lengths
+- Fixed issue with 32-bit builds
+
 # 0.8.3
 
 - Add LowerHex and UpperHex impls for G1Affine, G1Projective, G2Affine, G2Projective, Gt, Scalar
