@@ -1265,6 +1265,21 @@ impl Reduce<U384> for Scalar {
     }
 }
 
+#[cfg(target_pointer_width = "32")]
+fn raw_scalar_to_32bit_le_array(scalar: &Scalar, arr: &mut [u32]) {
+    let raw = scalar.to_raw();
+    let mut i = 0;
+    let mut j = 0;
+
+    while j < raw.len() {
+        arr[i] = raw[j] as u32;
+        arr[i + 1] = (raw[j] >> 32) as u32;
+
+        i += 2;
+        j += 1;
+    }
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 impl Reduce<U512> for Scalar {
     type Bytes = GenericArray<u8, U64>;
