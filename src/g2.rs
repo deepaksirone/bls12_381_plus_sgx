@@ -98,6 +98,33 @@ impl From<G2Projective> for G2Affine {
     }
 }
 
+/// Tries to convert a 96 byte compressed Vec of bytes to a G2Affine element.
+#[cfg(feature = "alloc")]
+impl core::convert::TryFrom<alloc::vec::Vec<u8>> for G2Affine {
+    type Error = alloc::string::String;
+
+    fn try_from(bytes: alloc::vec::Vec<u8>) -> Result<G2Affine, Self::Error> {
+        if bytes.len() != G2Affine::COMPRESSED_BYTES {
+            return Err(alloc::format!(
+                "Invalid number of bytes for G2Affine, expected {}, found {}",
+                G2Affine::COMPRESSED_BYTES,
+                bytes.len()
+            ));
+        }
+
+        let mut tmp = [0u8; G2Affine::COMPRESSED_BYTES];
+        tmp.copy_from_slice(&bytes[..G2Affine::COMPRESSED_BYTES]);
+        let g2_maybe = G2Affine::from_compressed(&tmp);
+        if g2_maybe.is_some().into() {
+            Ok(g2_maybe.unwrap())
+        } else {
+            Err(alloc::string::String::from(
+                "Compressed bytes did not convert into a valid G2Affine element",
+            ))
+        }
+    }
+}
+
 impl ConstantTimeEq for G2Affine {
     fn ct_eq(&self, other: &Self) -> Choice {
         // The only cases in which two points are equal are
@@ -597,6 +624,33 @@ impl<'a> From<&'a G2Affine> for G2Projective {
 impl From<G2Affine> for G2Projective {
     fn from(p: G2Affine) -> G2Projective {
         G2Projective::from(&p)
+    }
+}
+
+/// Converts a 96 byte compressed Vec of bytes to a G2Projective element.
+#[cfg(feature = "alloc")]
+impl TryFrom<alloc::vec::Vec<u8>> for G2Projective {
+    type Error = alloc::string::String;
+
+    fn try_from(bytes: alloc::vec::Vec<u8>) -> Result<G2Projective, Self::Error> {
+        if bytes.len() != G2Affine::COMPRESSED_BYTES {
+            return Err(alloc::format!(
+                "Invalid number of bytes for G2Projective, expected {}, found {}",
+                G2Affine::COMPRESSED_BYTES,
+                bytes.len()
+            ));
+        }
+
+        let mut tmp = [0u8; G2Affine::COMPRESSED_BYTES];
+        tmp.copy_from_slice(&bytes[..G2Affine::COMPRESSED_BYTES]);
+        let g2_maybe = G2Affine::from_compressed(&tmp);
+        if g2_maybe.is_some().into() {
+            Ok(g2_maybe.unwrap().into())
+        } else {
+            Err(alloc::string::String::from(
+                "Compressed bytes did not convert into a valid G1 point",
+            ))
+        }
     }
 }
 
@@ -1315,6 +1369,26 @@ impl PartialEq for G2Compressed {
     }
 }
 
+/// Impls TryFrom to converts from a ector to a 96 byte compressed G2
+#[cfg(feature = "alloc")]
+impl TryFrom<alloc::vec::Vec<u8>> for G2Compressed {
+    type Error = alloc::string::String;
+
+    fn try_from(v: alloc::vec::Vec<u8>) -> Result<Self, Self::Error> {
+        if v.len() != G2Affine::COMPRESSED_BYTES {
+            return Err(alloc::format!(
+                "Invalid length, expected {} bytes, found {}",
+                G2Affine::COMPRESSED_BYTES,
+                v.len()
+            ));
+        }
+        let mut ret = G2Compressed::default();
+        ret.0.copy_from_slice(&v);
+        Ok(ret)
+    }
+}
+
+/// Group2 in it's uncompressed form
 #[derive(Clone, Copy)]
 pub struct G2Uncompressed([u8; 192]);
 

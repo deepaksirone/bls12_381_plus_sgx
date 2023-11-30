@@ -1,3 +1,6 @@
+//! Benchmarks using non-wasm32 architectures only
+#![cfg(not(target_arch = "wasm32"))]
+
 #[macro_use]
 extern crate criterion;
 

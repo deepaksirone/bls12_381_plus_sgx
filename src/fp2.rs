@@ -217,6 +217,7 @@ impl Fp2 {
         }
     }
 
+    /// Multiply this element by another element
     pub fn mul(&self, rhs: &Fp2) -> Self {
         // F_{p^2} x F_{p^2} multiplication implemented with operand scanning (schoolbook)
         // computes the result as:

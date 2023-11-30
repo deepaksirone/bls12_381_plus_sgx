@@ -98,6 +98,30 @@ impl From<G1Projective> for G1Affine {
     }
 }
 
+#[cfg(feature = "alloc")]
+impl core::convert::TryFrom<alloc::vec::Vec<u8>> for G1Affine {
+    type Error = alloc::string::String;
+
+    fn try_from(bytes: alloc::vec::Vec<u8>) -> Result<G1Affine, Self::Error> {
+        if bytes.len() != G1Affine::COMPRESSED_BYTES {
+            return Err(alloc::format!(
+                "Invalid number of bytes for G1Affine, expected {}, found {}",
+                G1Affine::COMPRESSED_BYTES,
+                bytes.len()
+            ));
+        }
+
+        let mut tmp = [0u8; G1Affine::COMPRESSED_BYTES];
+        tmp.copy_from_slice(&bytes[..G1Affine::COMPRESSED_BYTES]);
+        let g1_maybe = G1Affine::from_compressed(&tmp);
+        if g1_maybe.is_some().into() {
+            Ok(g1_maybe.unwrap())
+        } else {
+            Err(alloc::string::String::from("Invalid G1 point"))
+        }
+    }
+}
+
 impl ConstantTimeEq for G1Affine {
     fn ct_eq(&self, other: &Self) -> Choice {
         // The only cases in which two points are equal are
@@ -542,6 +566,31 @@ impl<'a> From<&'a G1Affine> for G1Projective {
 impl From<G1Affine> for G1Projective {
     fn from(p: G1Affine) -> G1Projective {
         G1Projective::from(&p)
+    }
+}
+
+/// Converts from a 48 byte compressed Vector to a G1Projective
+#[cfg(feature = "alloc")]
+impl core::convert::TryFrom<alloc::vec::Vec<u8>> for G1Projective {
+    type Error = alloc::string::String;
+
+    fn try_from(bytes: alloc::vec::Vec<u8>) -> Result<G1Projective, Self::Error> {
+        if bytes.len() != G1Affine::COMPRESSED_BYTES {
+            return Err(alloc::format!(
+                "Invalid number of bytes for G2Affine, expected {}, found {}",
+                G1Affine::COMPRESSED_BYTES,
+                bytes.len()
+            ));
+        }
+
+        let mut tmp = [0u8; G1Affine::COMPRESSED_BYTES];
+        tmp.copy_from_slice(&bytes[..G1Affine::COMPRESSED_BYTES]);
+        let g1_maybe = G1Affine::from_compressed(&tmp);
+        if g1_maybe.is_some().into() {
+            Ok(g1_maybe.unwrap().into())
+        } else {
+            Err(alloc::string::String::from("Invalid G1 point"))
+        }
     }
 }
 
@@ -1044,6 +1093,7 @@ impl G1Projective {
     impl_pippenger_sum_of_products!();
 }
 
+/// Group1 in it's compressed form
 #[derive(Clone, Copy)]
 pub struct G1Compressed([u8; 48]);
 
@@ -1087,6 +1137,26 @@ impl PartialEq for G1Compressed {
     }
 }
 
+/// Impls TryFrom to converts from a ector to a 48 byte compressed G1
+#[cfg(feature = "alloc")]
+impl TryFrom<alloc::vec::Vec<u8>> for G1Compressed {
+    type Error = alloc::string::String;
+
+    fn try_from(bytes: alloc::vec::Vec<u8>) -> Result<Self, Self::Error> {
+        if bytes.len() != G1Affine::COMPRESSED_BYTES {
+            return Err(alloc::format!(
+                "Invalid length, expected {} bytes but got {} bytes",
+                G1Affine::COMPRESSED_BYTES,
+                bytes.len()
+            ));
+        }
+        let mut tmp = [0u8; G1Affine::COMPRESSED_BYTES];
+        tmp.copy_from_slice(&bytes[..G1Affine::COMPRESSED_BYTES]);
+        Ok(G1Compressed(tmp))
+    }
+}
+
+/// Group1 in it's Uncompressed from
 #[derive(Clone, Copy)]
 pub struct G1Uncompressed([u8; 96]);
 
