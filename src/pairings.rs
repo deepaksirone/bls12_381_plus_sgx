@@ -1079,8 +1079,14 @@ fn test_gt_generator() {
 fn test_bilinearity() {
     use crate::Scalar;
 
-    let a = Scalar::from_raw([1, 2, 3, 4]).invert().unwrap().square();
-    let b = Scalar::from_raw([5, 6, 7, 8]).invert().unwrap().square();
+    let a = Scalar::from_raw_unchecked([1, 2, 3, 4])
+        .invert()
+        .unwrap()
+        .square();
+    let b = Scalar::from_raw_unchecked([5, 6, 7, 8])
+        .invert()
+        .unwrap()
+        .square();
     let c = a * b;
 
     let g = G1Affine::from(G1Affine::generator() * a);
@@ -1116,27 +1122,51 @@ fn test_multi_miller_loop() {
     let b1 = G2Affine::generator();
 
     let a2 = G1Affine::from(
-        G1Affine::generator() * Scalar::from_raw([1, 2, 3, 4]).invert().unwrap().square(),
+        G1Affine::generator()
+            * Scalar::from_raw_unchecked([1, 2, 3, 4])
+                .invert()
+                .unwrap()
+                .square(),
     );
     let b2 = G2Affine::from(
-        G2Affine::generator() * Scalar::from_raw([4, 2, 2, 4]).invert().unwrap().square(),
+        G2Affine::generator()
+            * Scalar::from_raw_unchecked([4, 2, 2, 4])
+                .invert()
+                .unwrap()
+                .square(),
     );
 
     let a3 = G1Affine::identity();
     let b3 = G2Affine::from(
-        G2Affine::generator() * Scalar::from_raw([9, 2, 2, 4]).invert().unwrap().square(),
+        G2Affine::generator()
+            * Scalar::from_raw_unchecked([9, 2, 2, 4])
+                .invert()
+                .unwrap()
+                .square(),
     );
 
     let a4 = G1Affine::from(
-        G1Affine::generator() * Scalar::from_raw([5, 5, 5, 5]).invert().unwrap().square(),
+        G1Affine::generator()
+            * Scalar::from_raw_unchecked([5, 5, 5, 5])
+                .invert()
+                .unwrap()
+                .square(),
     );
     let b4 = G2Affine::identity();
 
     let a5 = G1Affine::from(
-        G1Affine::generator() * Scalar::from_raw([323, 32, 3, 1]).invert().unwrap().square(),
+        G1Affine::generator()
+            * Scalar::from_raw_unchecked([323, 32, 3, 1])
+                .invert()
+                .unwrap()
+                .square(),
     );
     let b5 = G2Affine::from(
-        G2Affine::generator() * Scalar::from_raw([4, 2, 2, 9099]).invert().unwrap().square(),
+        G2Affine::generator()
+            * Scalar::from_raw_unchecked([4, 2, 2, 9099])
+                .invert()
+                .unwrap()
+                .square(),
     );
 
     let b1_prepared = G2Prepared::from(b1);
@@ -1274,15 +1304,27 @@ fn test_product() {
 
     // test from Scalars, too
 
-    let a = Scalar::from_raw([1, 2, 3, 4]).invert().unwrap().square();
-    let b = Scalar::from_raw([5, 6, 7, 8]).invert().unwrap().square();
+    let a = Scalar::from_raw_unchecked([1, 2, 3, 4])
+        .invert()
+        .unwrap()
+        .square();
+    let b = Scalar::from_raw_unchecked([5, 6, 7, 8])
+        .invert()
+        .unwrap()
+        .square();
 
     let d = G1Affine::from(G1Affine::generator() * a);
     let e = G2Affine::from(G2Affine::generator() * b);
     let f = pairing(&d, &e);
 
-    let g = Scalar::from_raw([4, 2, 3, 4]).invert().unwrap().square();
-    let h = Scalar::from_raw([8, 6, 7, 8]).invert().unwrap().square();
+    let g = Scalar::from_raw_unchecked([4, 2, 3, 4])
+        .invert()
+        .unwrap()
+        .square();
+    let h = Scalar::from_raw_unchecked([8, 6, 7, 8])
+        .invert()
+        .unwrap()
+        .square();
 
     let j = G1Affine::from(G1Affine::generator() * g);
     let k = G2Affine::from(G2Affine::generator() * h);

@@ -957,7 +957,7 @@ impl fmt::UpperHex for Scalar {
 ///     scalar: Scalar,
 /// }
 ///
-/// let s = Scalar::from_raw([3u64, 3u64, 3u64, 3u64]);
+/// let s = Scalar::from_raw_unchecked([3u64, 3u64, 3u64, 3u64]);
 /// let t = TestStruct { scalar: s };
 ///
 /// let ser1 = serde_json::to_string(&t).unwrap();
@@ -1225,7 +1225,7 @@ impl FromUintUnchecked for Scalar {
                 *index |= words[i] as u64;
                 i += 2;
             }
-            Scalar::from_raw(out)
+            Scalar::from_raw_unchecked(out)
         }
     }
 }
@@ -1242,7 +1242,7 @@ impl FromUintUnchecked for Scalar {
             out[i] = (arr[2 * i] as u64) << 32 | arr[2 * i + 1] as u64;
         }
         out.reverse();
-        Scalar::from_raw(out)
+        Scalar::from_raw_unchecked(out)
     }
 }
 
@@ -1396,35 +1396,35 @@ pub fn run_test_wasm() {
     // 6. impl From<Scalar> for U512
 
     // test 1
-    let s = Scalar::from_raw([1u64, 2u64, 3u64, 4u64]);
+    let s = Scalar::from_raw_unchecked([1u64, 2u64, 3u64, 4u64]);
     let s_prim = ScalarPrimitive::from(&s);
     let s_prim2 = ScalarPrimitive::from(&s);
     assert_eq!(s_prim, s_prim2);
 
     // test 2
-    let s = Scalar::from_raw([1u64, 2u64, 3u64, 4u64]);
+    let s = Scalar::from_raw_unchecked([1u64, 2u64, 3u64, 4u64]);
     let s_prim = ScalarPrimitive::from(s);
     let s_prim2 = ScalarPrimitive::from(s);
     assert_eq!(s_prim, s_prim2);
 
     // test 3
-    let s = Scalar::from_raw([1u64, 2u64, 3u64, 4u64]);
+    let s = Scalar::from_raw_unchecked([1u64, 2u64, 3u64, 4u64]);
 
     let u: &U384 = &s.into();
     assert_eq!(u, &U384::from(s));
 
     // test 4
-    let s = Scalar::from_raw([1u64, 2u64, 3u64, 4u64]);
+    let s = Scalar::from_raw_unchecked([1u64, 2u64, 3u64, 4u64]);
     let u: U384 = s.into();
     assert_eq!(u, U384::from(s));
 
     // test 5
-    let s = Scalar::from_raw([1u64, 2u64, 3u64, 4u64]);
+    let s = Scalar::from_raw_unchecked([1u64, 2u64, 3u64, 4u64]);
     let u: &U512 = &s.into();
     assert_eq!(u, &U512::from(s));
 
     // test 6
-    let s = Scalar::from_raw([1u64, 2u64, 3u64, 4u64]);
+    let s = Scalar::from_raw_unchecked([1u64, 2u64, 3u64, 4u64]);
     let u = U512::from(s);
     assert_eq!(u, U512::from(s));
 }
@@ -1881,23 +1881,23 @@ fn test_sqrt() {
 #[test]
 fn test_from_raw() {
     assert_eq!(
-        Scalar::from_raw([
+        Scalar::from_raw_unchecked([
             0x0001_ffff_fffd,
             0x5884_b7fa_0003_4802,
             0x998c_4fef_ecbc_4ff5,
             0x1824_b159_acc5_056f,
         ]),
-        Scalar::from_raw([0xffff_ffff_ffff_ffff; 4])
+        Scalar::from_raw_unchecked([0xffff_ffff_ffff_ffff; 4])
     );
 
-    assert_eq!(Scalar::from_raw(MODULUS.0), Scalar::ZERO);
+    assert_eq!(Scalar::from_raw_unchecked(MODULUS.0), Scalar::ZERO);
 
-    assert_eq!(Scalar::from_raw([1, 0, 0, 0]), R);
+    assert_eq!(Scalar::from_raw_unchecked([1, 0, 0, 0]), R);
 }
 
 #[test]
 fn test_double() {
-    let a = Scalar::from_raw([
+    let a = Scalar::from_raw_unchecked([
         0x1fff_3231_233f_fffd,
         0x4884_b7fa_0003_4802,
         0x998c_4fef_ecbc_4ff3,
@@ -1926,7 +1926,7 @@ fn test_from_okm() {
 fn test_zeroize() {
     use zeroize::Zeroize;
 
-    let mut a = Scalar::from_raw([
+    let mut a = Scalar::from_raw_unchecked([
         0x1fff_3231_233f_fffd,
         0x4884_b7fa_0003_4802,
         0x998c_4fef_ecbc_4ff3,

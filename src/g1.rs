@@ -1817,13 +1817,13 @@ fn test_affine_negation_and_subtraction() {
 #[test]
 fn test_projective_scalar_multiplication() {
     let g = G1Projective::GENERATOR;
-    let a = Scalar::from_raw([
+    let a = Scalar::from_raw_unchecked([
         0x2b56_8297_a56d_a71c,
         0xd8c3_9ecb_0ef3_75d1,
         0x435c_38da_67bf_bf96,
         0x8088_a050_26b6_59b2,
     ]);
-    let b = Scalar::from_raw([
+    let b = Scalar::from_raw_unchecked([
         0x785f_dd9b_26ef_8b85,
         0xc997_f258_3769_5c18,
         0x4c8d_bc39_e7b7_56c1,
@@ -1837,13 +1837,13 @@ fn test_projective_scalar_multiplication() {
 #[test]
 fn test_affine_scalar_multiplication() {
     let g = G1Affine::generator();
-    let a = Scalar::from_raw([
+    let a = Scalar::from_raw_unchecked([
         0x2b56_8297_a56d_a71c,
         0xd8c3_9ecb_0ef3_75d1,
         0x435c_38da_67bf_bf96,
         0x8088_a050_26b6_59b2,
     ]);
-    let b = Scalar::from_raw([
+    let b = Scalar::from_raw_unchecked([
         0x785f_dd9b_26ef_8b85,
         0xc997_f258_3769_5c18,
         0x4c8d_bc39_e7b7_56c1,
@@ -2009,7 +2009,7 @@ fn test_zeroize() {
 
 #[test]
 fn test_commutative_scalar_subgroup_multiplication() {
-    let a = Scalar::from_raw([
+    let a = Scalar::from_raw_unchecked([
         0x1fff_3231_233f_fffd,
         0x4884_b7fa_0003_4802,
         0x998c_4fef_ecbc_4ff3,
