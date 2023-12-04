@@ -390,10 +390,10 @@ impl Gt {
         Self::from_bytes(&buf)
     }
 
-    /// Multiplies two Gt elements together 
+    /// Multiplies two Gt elements together
     pub fn product(a: &Self, b: &Self) -> Self {
         let r = a.0.mul(&b.0);
-        Self (r)
+        Self(r)
     }
 }
 
@@ -473,7 +473,7 @@ impl Mul<&Gt> for Gt {
     type Output = Self;
 
     fn mul(self, other: &Gt) -> Self {
-        Gt::product(&self, other)
+        self * *other
     }
 }
 
@@ -481,7 +481,7 @@ impl Mul<Gt> for &Gt {
     type Output = Gt;
 
     fn mul(self, other: Gt) -> Gt {
-        Gt::product(&self, &other)
+        *self * other
     }
 }
 
@@ -489,10 +489,9 @@ impl Mul<&Gt> for &Gt {
     type Output = Gt;
 
     fn mul(self, other: &Gt) -> Gt {
-        Gt::product(self, other)
+        *self * *other
     }
 }
-
 
 impl_binops_additive!(Gt, Gt);
 impl_binops_multiplicative!(Gt, Scalar);
@@ -1251,14 +1250,14 @@ fn test_product() {
     use rand_core::SeedableRng;
     use rand_xorshift::XorShiftRng;
 
-    // tests Gt * Gt 
+    // tests Gt * Gt
     let s1 = Gt::generator();
     let s2 = Gt::generator();
     let s3 = s1 * s2;
     let s4 = s2 * s1;
     assert_eq!(s3, s4);
 
-    // test borrowed versions as well 
+    // test borrowed versions as well
 
     let seed = [1u8; 16];
     let seed_2 = [2u8; 16];
@@ -1272,9 +1271,9 @@ fn test_product() {
     let s2 = t2 * &t1;
 
     assert_eq!(s1, s2);
-   
-    // test from Scalars, too 
-    
+
+    // test from Scalars, too
+
     let a = Scalar::from_raw([1, 2, 3, 4]).invert().unwrap().square();
     let b = Scalar::from_raw([5, 6, 7, 8]).invert().unwrap().square();
 

@@ -440,7 +440,13 @@ impl Scalar {
 
     /// Converts from an integer represented in little endian
     /// into its (congruent) `Scalar` representation.
-    pub const fn from_raw(val: [u64; 4]) -> Self {
+    pub fn from_raw(val: [u64; 4]) -> CtOption<Self> {
+        CtOption::new((&Scalar(val)).mul(&R2), 1u8.into())
+    }
+
+    /// Converts from an integer represented in little endian
+    /// into its (congruent) `Scalar` representation.
+    pub const fn from_raw_unchecked(val: [u64; 4]) -> Self {
         (&Scalar(val)).mul(&R2)
     }
 
@@ -1208,7 +1214,7 @@ impl FromUintUnchecked for Scalar {
         #[cfg(target_pointer_width = "64")]
         {
             out.copy_from_slice(&uint.as_words()[..4]);
-            Scalar::from_raw(out)
+            Scalar::from_raw_unchecked(out)
         }
         #[cfg(target_pointer_width = "32")]
         {

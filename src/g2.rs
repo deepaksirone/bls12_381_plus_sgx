@@ -100,28 +100,19 @@ impl From<G2Projective> for G2Affine {
 
 /// Tries to convert a 96 byte compressed Vec of bytes to a G2Affine element.
 #[cfg(feature = "alloc")]
-impl core::convert::TryFrom<alloc::vec::Vec<u8>> for G2Affine {
+impl TryFrom<alloc::vec::Vec<u8>> for G2Affine {
     type Error = alloc::string::String;
 
-    fn try_from(bytes: alloc::vec::Vec<u8>) -> Result<G2Affine, Self::Error> {
-        if bytes.len() != G2Affine::COMPRESSED_BYTES {
-            return Err(alloc::format!(
+    fn try_from(value: alloc::vec::Vec<u8>) -> Result<G2Affine, Self::Error> {
+        let tmp = <[u8; Self::COMPRESSED_BYTES]>::try_from(value.as_slice()).map_err(|_| {
+            alloc::format!(
                 "Invalid number of bytes for G2Affine, expected {}, found {}",
-                G2Affine::COMPRESSED_BYTES,
-                bytes.len()
-            ));
-        }
-
-        let mut tmp = [0u8; G2Affine::COMPRESSED_BYTES];
-        tmp.copy_from_slice(&bytes[..G2Affine::COMPRESSED_BYTES]);
-        let g2_maybe = G2Affine::from_compressed(&tmp);
-        if g2_maybe.is_some().into() {
-            Ok(g2_maybe.unwrap())
-        } else {
-            Err(alloc::string::String::from(
-                "Compressed bytes did not convert into a valid G2Affine element",
-            ))
-        }
+                Self::COMPRESSED_BYTES,
+                value.len()
+            )
+        })?;
+        Option::from(G2Affine::from_compressed(&tmp))
+            .ok_or(alloc::string::String::from("Invalid bytes for G2Affine"))
     }
 }
 
@@ -632,25 +623,17 @@ impl From<G2Affine> for G2Projective {
 impl TryFrom<alloc::vec::Vec<u8>> for G2Projective {
     type Error = alloc::string::String;
 
-    fn try_from(bytes: alloc::vec::Vec<u8>) -> Result<G2Projective, Self::Error> {
-        if bytes.len() != G2Affine::COMPRESSED_BYTES {
-            return Err(alloc::format!(
+    fn try_from(value: alloc::vec::Vec<u8>) -> Result<G2Projective, Self::Error> {
+        let tmp = <[u8; Self::COMPRESSED_BYTES]>::try_from(value.as_slice()).map_err(|_| {
+            alloc::format!(
                 "Invalid number of bytes for G2Projective, expected {}, found {}",
-                G2Affine::COMPRESSED_BYTES,
-                bytes.len()
-            ));
-        }
-
-        let mut tmp = [0u8; G2Affine::COMPRESSED_BYTES];
-        tmp.copy_from_slice(&bytes[..G2Affine::COMPRESSED_BYTES]);
-        let g2_maybe = G2Affine::from_compressed(&tmp);
-        if g2_maybe.is_some().into() {
-            Ok(g2_maybe.unwrap().into())
-        } else {
-            Err(alloc::string::String::from(
-                "Compressed bytes did not convert into a valid G1 point",
-            ))
-        }
+                Self::COMPRESSED_BYTES,
+                value.len()
+            )
+        })?;
+        Option::from(G2Projective::from_compressed(&tmp)).ok_or(alloc::string::String::from(
+            "Invalid bytes for G2Projective",
+        ))
     }
 }
 
@@ -1374,17 +1357,15 @@ impl PartialEq for G2Compressed {
 impl TryFrom<alloc::vec::Vec<u8>> for G2Compressed {
     type Error = alloc::string::String;
 
-    fn try_from(v: alloc::vec::Vec<u8>) -> Result<Self, Self::Error> {
-        if v.len() != G2Affine::COMPRESSED_BYTES {
-            return Err(alloc::format!(
-                "Invalid length, expected {} bytes, found {}",
+    fn try_from(value: alloc::vec::Vec<u8>) -> Result<Self, Self::Error> {
+        let tmp = <[u8; G2Affine::COMPRESSED_BYTES]>::try_from(value.as_slice()).map_err(|_| {
+            alloc::format!(
+                "Invalid number of bytes for G2Compressed, expected {}, found {}",
                 G2Affine::COMPRESSED_BYTES,
-                v.len()
-            ));
-        }
-        let mut ret = G2Compressed::default();
-        ret.0.copy_from_slice(&v);
-        Ok(ret)
+                value.len()
+            )
+        })?;
+        Ok(Self(tmp))
     }
 }
 
@@ -1421,6 +1402,23 @@ impl AsMut<[u8]> for G2Uncompressed {
 impl ConstantTimeEq for G2Uncompressed {
     fn ct_eq(&self, other: &Self) -> Choice {
         self.0.ct_eq(&other.0)
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl TryFrom<alloc::vec::Vec<u8>> for G2Uncompressed {
+    type Error = alloc::string::String;
+
+    fn try_from(value: alloc::vec::Vec<u8>) -> Result<Self, Self::Error> {
+        let tmp =
+            <[u8; G2Affine::UNCOMPRESSED_BYTES]>::try_from(value.as_slice()).map_err(|_| {
+                alloc::format!(
+                    "Invalid number of bytes for G2Uncompressed, expected {}, found {}",
+                    G2Affine::UNCOMPRESSED_BYTES,
+                    value.len()
+                )
+            })?;
+        Ok(Self(tmp))
     }
 }
 

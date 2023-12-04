@@ -99,26 +99,19 @@ impl From<G1Projective> for G1Affine {
 }
 
 #[cfg(feature = "alloc")]
-impl core::convert::TryFrom<alloc::vec::Vec<u8>> for G1Affine {
+impl TryFrom<alloc::vec::Vec<u8>> for G1Affine {
     type Error = alloc::string::String;
 
-    fn try_from(bytes: alloc::vec::Vec<u8>) -> Result<G1Affine, Self::Error> {
-        if bytes.len() != G1Affine::COMPRESSED_BYTES {
-            return Err(alloc::format!(
+    fn try_from(value: alloc::vec::Vec<u8>) -> Result<Self, Self::Error> {
+        let tmp = <[u8; Self::COMPRESSED_BYTES]>::try_from(value.as_slice()).map_err(|_| {
+            alloc::format!(
                 "Invalid number of bytes for G1Affine, expected {}, found {}",
-                G1Affine::COMPRESSED_BYTES,
-                bytes.len()
-            ));
-        }
-
-        let mut tmp = [0u8; G1Affine::COMPRESSED_BYTES];
-        tmp.copy_from_slice(&bytes[..G1Affine::COMPRESSED_BYTES]);
-        let g1_maybe = G1Affine::from_compressed(&tmp);
-        if g1_maybe.is_some().into() {
-            Ok(g1_maybe.unwrap())
-        } else {
-            Err(alloc::string::String::from("Invalid G1 point"))
-        }
+                Self::COMPRESSED_BYTES,
+                value.len()
+            )
+        })?;
+        Option::from(G1Affine::from_compressed(&tmp))
+            .ok_or(alloc::string::String::from("Invalid bytes for G1Affine"))
     }
 }
 
@@ -571,26 +564,20 @@ impl From<G1Affine> for G1Projective {
 
 /// Converts from a 48 byte compressed Vector to a G1Projective
 #[cfg(feature = "alloc")]
-impl core::convert::TryFrom<alloc::vec::Vec<u8>> for G1Projective {
+impl TryFrom<alloc::vec::Vec<u8>> for G1Projective {
     type Error = alloc::string::String;
 
-    fn try_from(bytes: alloc::vec::Vec<u8>) -> Result<G1Projective, Self::Error> {
-        if bytes.len() != G1Affine::COMPRESSED_BYTES {
-            return Err(alloc::format!(
-                "Invalid number of bytes for G2Affine, expected {}, found {}",
-                G1Affine::COMPRESSED_BYTES,
-                bytes.len()
-            ));
-        }
-
-        let mut tmp = [0u8; G1Affine::COMPRESSED_BYTES];
-        tmp.copy_from_slice(&bytes[..G1Affine::COMPRESSED_BYTES]);
-        let g1_maybe = G1Affine::from_compressed(&tmp);
-        if g1_maybe.is_some().into() {
-            Ok(g1_maybe.unwrap().into())
-        } else {
-            Err(alloc::string::String::from("Invalid G1 point"))
-        }
+    fn try_from(value: alloc::vec::Vec<u8>) -> Result<G1Projective, Self::Error> {
+        let tmp = <[u8; Self::COMPRESSED_BYTES]>::try_from(value.as_slice()).map_err(|_| {
+            alloc::format!(
+                "Invalid number of bytes for G1Projective, expected {}, found {}",
+                Self::COMPRESSED_BYTES,
+                value.len()
+            )
+        })?;
+        Option::from(G1Projective::from_compressed(&tmp)).ok_or(alloc::string::String::from(
+            "Invalid bytes for G1Projective",
+        ))
     }
 }
 
@@ -1137,22 +1124,20 @@ impl PartialEq for G1Compressed {
     }
 }
 
-/// Impls TryFrom to converts from a ector to a 48 byte compressed G1
+/// Impls TryFrom to converts from a vector to a 48 byte compressed G1
 #[cfg(feature = "alloc")]
 impl TryFrom<alloc::vec::Vec<u8>> for G1Compressed {
     type Error = alloc::string::String;
 
-    fn try_from(bytes: alloc::vec::Vec<u8>) -> Result<Self, Self::Error> {
-        if bytes.len() != G1Affine::COMPRESSED_BYTES {
-            return Err(alloc::format!(
-                "Invalid length, expected {} bytes but got {} bytes",
+    fn try_from(value: alloc::vec::Vec<u8>) -> Result<Self, Self::Error> {
+        let tmp = <[u8; G1Affine::COMPRESSED_BYTES]>::try_from(value.as_slice()).map_err(|_| {
+            alloc::format!(
+                "Invalid number of bytes for G1Compressed, expected {}, found {}",
                 G1Affine::COMPRESSED_BYTES,
-                bytes.len()
-            ));
-        }
-        let mut tmp = [0u8; G1Affine::COMPRESSED_BYTES];
-        tmp.copy_from_slice(&bytes[..G1Affine::COMPRESSED_BYTES]);
-        Ok(G1Compressed(tmp))
+                value.len()
+            )
+        })?;
+        Ok(Self(tmp))
     }
 }
 
@@ -1189,6 +1174,23 @@ impl AsMut<[u8]> for G1Uncompressed {
 impl ConstantTimeEq for G1Uncompressed {
     fn ct_eq(&self, other: &Self) -> Choice {
         self.0.ct_eq(&other.0)
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl TryFrom<alloc::vec::Vec<u8>> for G1Uncompressed {
+    type Error = alloc::string::String;
+
+    fn try_from(value: alloc::vec::Vec<u8>) -> Result<Self, Self::Error> {
+        let tmp =
+            <[u8; G1Affine::UNCOMPRESSED_BYTES]>::try_from(value.as_slice()).map_err(|_| {
+                alloc::format!(
+                    "Invalid number of bytes for G1Uncompressed, expected {}, found {}",
+                    G1Affine::UNCOMPRESSED_BYTES,
+                    value.len()
+                )
+            })?;
+        Ok(Self(tmp))
     }
 }
 
