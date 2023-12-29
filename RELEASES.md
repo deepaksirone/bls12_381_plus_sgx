@@ -1,3 +1,8 @@
+# 0.8.11
+
+- Added invert to Gt
+- Added From<Vec<u8>> and TryFrom<Vec<u8>> for types
+
 # 0.8.6
 
 - Added debug_asserts to check lengths

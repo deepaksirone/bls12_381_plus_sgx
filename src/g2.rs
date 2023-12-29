@@ -98,23 +98,20 @@ impl From<G2Projective> for G2Affine {
     }
 }
 
-/// Tries to convert a 96 byte compressed Vec of bytes to a G2Affine element.
-#[cfg(feature = "alloc")]
-impl TryFrom<alloc::vec::Vec<u8>> for G2Affine {
-    type Error = alloc::string::String;
-
-    fn try_from(value: alloc::vec::Vec<u8>) -> Result<G2Affine, Self::Error> {
-        let tmp = <[u8; Self::COMPRESSED_BYTES]>::try_from(value.as_slice()).map_err(|_| {
+impl_from_bytes!(
+    G2Affine,
+    |p: &G2Affine| p.to_compressed(),
+    |arr: &[u8]| {
+        let tmp = <[u8; G2Affine::COMPRESSED_BYTES]>::try_from(arr).map_err(|_| {
             alloc::format!(
-                "Invalid number of bytes for G2Affine, expected {}, found {}",
-                Self::COMPRESSED_BYTES,
-                value.len()
+                "Invalid number of bytes for G1Affine, expected {}, found {}",
+                G2Affine::COMPRESSED_BYTES,
+                arr.len()
             )
         })?;
-        Option::from(G2Affine::from_compressed(&tmp))
-            .ok_or(alloc::string::String::from("Invalid bytes for G2Affine"))
+        Ok::<CtOption<G2Affine>, alloc::string::String>(G2Affine::from_compressed(&tmp))
     }
-}
+);
 
 impl ConstantTimeEq for G2Affine {
     fn ct_eq(&self, other: &Self) -> Choice {
@@ -618,24 +615,20 @@ impl From<G2Affine> for G2Projective {
     }
 }
 
-/// Converts a 96 byte compressed Vec of bytes to a G2Projective element.
-#[cfg(feature = "alloc")]
-impl TryFrom<alloc::vec::Vec<u8>> for G2Projective {
-    type Error = alloc::string::String;
-
-    fn try_from(value: alloc::vec::Vec<u8>) -> Result<G2Projective, Self::Error> {
-        let tmp = <[u8; Self::COMPRESSED_BYTES]>::try_from(value.as_slice()).map_err(|_| {
+impl_from_bytes!(
+    G2Projective,
+    |p: &G2Projective| p.to_compressed(),
+    |arr: &[u8]| {
+        let tmp = <[u8; G2Projective::COMPRESSED_BYTES]>::try_from(arr).map_err(|_| {
             alloc::format!(
-                "Invalid number of bytes for G2Projective, expected {}, found {}",
-                Self::COMPRESSED_BYTES,
-                value.len()
+                "Invalid number of bytes for G1Projective, expected {}, found {}",
+                G2Projective::COMPRESSED_BYTES,
+                arr.len()
             )
         })?;
-        Option::from(G2Projective::from_compressed(&tmp)).ok_or(alloc::string::String::from(
-            "Invalid bytes for G2Projective",
-        ))
+        Ok::<CtOption<G2Projective>, alloc::string::String>(G2Projective::from_compressed(&tmp))
     }
-}
+);
 
 impl ConstantTimeEq for G2Projective {
     fn ct_eq(&self, other: &Self) -> Choice {
@@ -1352,22 +1345,19 @@ impl PartialEq for G2Compressed {
     }
 }
 
-/// Impls TryFrom to converts from a ector to a 96 byte compressed G2
-#[cfg(feature = "alloc")]
-impl TryFrom<alloc::vec::Vec<u8>> for G2Compressed {
-    type Error = alloc::string::String;
-
-    fn try_from(value: alloc::vec::Vec<u8>) -> Result<Self, Self::Error> {
-        let tmp = <[u8; G2Affine::COMPRESSED_BYTES]>::try_from(value.as_slice()).map_err(|_| {
-            alloc::format!(
-                "Invalid number of bytes for G2Compressed, expected {}, found {}",
-                G2Affine::COMPRESSED_BYTES,
-                value.len()
-            )
-        })?;
-        Ok(Self(tmp))
-    }
-}
+impl_from_bytes!(G2Compressed, |p: &G2Compressed| p.0, |arr: &[u8]| {
+    let tmp = <[u8; G2Affine::COMPRESSED_BYTES]>::try_from(arr).map_err(|_| {
+        alloc::format!(
+            "Invalid number of bytes for G2Compressed, expected {}, found {}",
+            G2Affine::COMPRESSED_BYTES,
+            arr.len()
+        )
+    })?;
+    Ok::<CtOption<G2Compressed>, alloc::string::String>(CtOption::new(
+        G2Compressed(tmp),
+        Choice::from(1u8),
+    ))
+});
 
 /// Group2 in it's uncompressed form
 #[derive(Clone, Copy)]
@@ -1405,22 +1395,19 @@ impl ConstantTimeEq for G2Uncompressed {
     }
 }
 
-#[cfg(feature = "alloc")]
-impl TryFrom<alloc::vec::Vec<u8>> for G2Uncompressed {
-    type Error = alloc::string::String;
-
-    fn try_from(value: alloc::vec::Vec<u8>) -> Result<Self, Self::Error> {
-        let tmp =
-            <[u8; G2Affine::UNCOMPRESSED_BYTES]>::try_from(value.as_slice()).map_err(|_| {
-                alloc::format!(
-                    "Invalid number of bytes for G2Uncompressed, expected {}, found {}",
-                    G2Affine::UNCOMPRESSED_BYTES,
-                    value.len()
-                )
-            })?;
-        Ok(Self(tmp))
-    }
-}
+impl_from_bytes!(G2Uncompressed, |p: &G2Uncompressed| p.0, |arr: &[u8]| {
+    let tmp = <[u8; G2Affine::UNCOMPRESSED_BYTES]>::try_from(arr).map_err(|_| {
+        alloc::format!(
+            "Invalid number of bytes for G2Uncompressed, expected {}, found {}",
+            G2Affine::UNCOMPRESSED_BYTES,
+            arr.len()
+        )
+    })?;
+    Ok::<CtOption<G2Uncompressed>, alloc::string::String>(CtOption::new(
+        G2Uncompressed(tmp),
+        Choice::from(1u8),
+    ))
+});
 
 impl Eq for G2Uncompressed {}
 impl PartialEq for G2Uncompressed {

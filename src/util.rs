@@ -441,3 +441,64 @@ macro_rules! impl_serde {
         }
     };
 }
+
+macro_rules! impl_from_bytes {
+    ($name:ident, $tobytesfunc:expr, $frombytesfunc:expr) => {
+        #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+        #[cfg(feature = "alloc")]
+        impl From<$name> for alloc::vec::Vec<u8> {
+            fn from(value: $name) -> Self {
+                Self::from(&value)
+            }
+        }
+
+        #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+        #[cfg(feature = "alloc")]
+        impl From<&$name> for alloc::vec::Vec<u8> {
+            fn from(value: &$name) -> Self {
+                $tobytesfunc(value).to_vec()
+            }
+        }
+
+        #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+        #[cfg(feature = "alloc")]
+        impl TryFrom<alloc::vec::Vec<u8>> for $name {
+            type Error = alloc::string::String;
+
+            fn try_from(value: alloc::vec::Vec<u8>) -> Result<Self, Self::Error> {
+                Self::try_from(value.as_slice())
+            }
+        }
+
+        #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+        #[cfg(feature = "alloc")]
+        impl TryFrom<&alloc::vec::Vec<u8>> for $name {
+            type Error = alloc::string::String;
+
+            fn try_from(value: &alloc::vec::Vec<u8>) -> Result<Self, Self::Error> {
+                Self::try_from(value.as_slice())
+            }
+        }
+
+        #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+        #[cfg(feature = "alloc")]
+        impl TryFrom<alloc::boxed::Box<[u8]>> for $name {
+            type Error = alloc::string::String;
+
+            fn try_from(value: alloc::boxed::Box<[u8]>) -> Result<Self, Self::Error> {
+                Self::try_from(value.as_ref())
+            }
+        }
+
+        #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+        #[cfg(feature = "alloc")]
+        impl TryFrom<&[u8]> for $name {
+            type Error = alloc::string::String;
+
+            fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+                Option::<$name>::from($frombytesfunc(value)?)
+                    .ok_or_else(|| alloc::format!("Invalid bytes for {}", stringify!($name)))
+            }
+        }
+    };
+}

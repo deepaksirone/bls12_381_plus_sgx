@@ -1246,6 +1246,17 @@ impl FromUintUnchecked for Scalar {
     }
 }
 
+impl_from_bytes!(Scalar, |s: &Scalar| s.to_be_bytes(), |arr: &[u8]| {
+    let tmp: [u8; 32] = arr.try_into().map_err(|_| {
+        alloc::format!(
+            "Invalid number of bytes for Scalar, expected {}, found {}",
+            Scalar::BYTES,
+            arr.len()
+        )
+    })?;
+    Ok::<CtOption<Scalar>, alloc::string::String>(Scalar::from_be_bytes(&tmp))
+});
+
 impl Invert for Scalar {
     type Output = CtOption<Self>;
 
@@ -2015,4 +2026,23 @@ fn test_reduce() {
 
     let m = Scalar::reduce(t);
     assert_eq!(m, Scalar::ONE + Scalar::ONE + Scalar::ONE);
+}
+
+#[cfg(feature = "alloc")]
+#[test]
+fn test_from_vec() {
+    use rand_core::SeedableRng;
+    let mut rng = rand_xorshift::XorShiftRng::from_seed([33u8; 16]);
+    let mut bytes = alloc::vec![0u8; 32];
+    for _ in 0..50 {
+        rng.fill_bytes(&mut bytes[1..]);
+        let res: Result<Scalar, alloc::string::String> = (&bytes).try_into();
+        assert!(res.is_ok());
+        let res: Result<Scalar, alloc::string::String> = bytes.as_slice().try_into();
+        assert!(res.is_ok());
+        let res: Result<Scalar, alloc::string::String> = bytes.clone().try_into();
+        assert!(res.is_ok());
+        let s = res.unwrap();
+        assert_eq!(bytes, <&Scalar as Into<alloc::vec::Vec<u8>>>::into(&s));
+    }
 }

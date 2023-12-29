@@ -395,6 +395,11 @@ impl Gt {
         let r = a.0.mul(&b.0);
         Self(r)
     }
+
+    /// Compute the inverse of this element.
+    pub fn invert(&self) -> CtOption<Self> {
+        self.0.invert().map(|r| Self(r))
+    }
 }
 
 impl<'a> Neg for &'a Gt {
@@ -701,6 +706,19 @@ impl_serde!(
     Gt::BYTES,
     Gt::HEX_BYTES
 );
+
+impl_from_bytes!(Gt, |p: &Gt| p.to_bytes(), |arr: &[u8]| {
+    if arr.len() != Gt::BYTES {
+        return Err(alloc::format!(
+            "Invalid number of bytes for Gt, expected {}, found {}",
+            Gt::BYTES,
+            arr.len()
+        ));
+    }
+    let mut buf = [0u8; Gt::BYTES];
+    buf.copy_from_slice(arr);
+    Ok(Gt::from_bytes(&buf))
+});
 
 #[cfg_attr(docsrs, doc(cfg(all(feature = "pairings"))))]
 #[derive(Clone, Debug)]
