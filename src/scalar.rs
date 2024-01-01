@@ -1378,14 +1378,15 @@ impl Reduce<U512> for Scalar {
     type Bytes = GenericArray<u8, U64>;
 
     fn reduce(n: U512) -> Self {
-        let mut out = [0u64; 4];
-        let arr = n.as_words();
-        // convert from [u32;8] to [u64;4]
-        for i in 0..4 {
-            out[i] = (arr[2 * i] as u64) << 32 | arr[2 * i + 1] as u64;
+        let words = n.as_words();
+        let mut arr = [0u64; 8];
+        let mut i = 0;
+        for index in arr.iter_mut() {
+            *index = (words[i + 1] as u64) << 32;
+            *index |= words[i] as u64;
+            i += 2;
         }
-        out.reverse();
-        Self::from_raw(out)
+        Self::from_u512(arr)
     }
 
     fn reduce_bytes(bytes: &Self::Bytes) -> Self {
