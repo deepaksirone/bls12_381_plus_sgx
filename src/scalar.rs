@@ -824,7 +824,7 @@ impl PrimeField for Scalar {
     type Repr = [u8; 32];
 
     fn from_repr(r: Self::Repr) -> CtOption<Self> {
-        Self::from_le_bytes(&r)
+        Self::from_le_bytes(&r).or_else(|| Self::from_be_bytes(&r))
     }
 
     fn to_repr(&self) -> Self::Repr {

@@ -104,7 +104,7 @@ impl_from_bytes!(
     |arr: &[u8]| {
         let tmp = <[u8; G2Affine::COMPRESSED_BYTES]>::try_from(arr).map_err(|_| {
             alloc::format!(
-                "Invalid number of bytes for G1Affine, expected {}, found {}",
+                "Invalid number of bytes for G2Affine, expected {}, found {}",
                 G2Affine::COMPRESSED_BYTES,
                 arr.len()
             )
@@ -621,7 +621,7 @@ impl_from_bytes!(
     |arr: &[u8]| {
         let tmp = <[u8; G2Projective::COMPRESSED_BYTES]>::try_from(arr).map_err(|_| {
             alloc::format!(
-                "Invalid number of bytes for G1Projective, expected {}, found {}",
+                "Invalid number of bytes for G2Projective, expected {}, found {}",
                 G2Projective::COMPRESSED_BYTES,
                 arr.len()
             )
