@@ -823,8 +823,14 @@ impl Field for Scalar {
 impl PrimeField for Scalar {
     type Repr = [u8; 32];
 
-    fn from_repr(r: Self::Repr) -> CtOption<Self> {
-        Self::from_le_bytes(&r).or_else(|| Self::from_be_bytes(&r))
+    fn from_repr(mut r: Self::Repr) -> CtOption<Self> {
+        Self::from_le_bytes(&r).or_else(|| {
+            r.reverse();
+            let mut bytes = [0u8; 48];
+            bytes[16..].copy_from_slice(&r);
+            let s = Self::from_okm(&bytes);
+            CtOption::new(s, !s.is_zero())
+        })
     }
 
     fn to_repr(&self) -> Self::Repr {
