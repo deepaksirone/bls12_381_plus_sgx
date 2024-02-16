@@ -22,7 +22,6 @@ use elliptic_curve::consts::U96;
 use elliptic_curve::generic_array::GenericArray;
 use elliptic_curve::ops::{LinearCombination, MulByGenerator};
 use elliptic_curve::point::AffineCoordinates;
-#[cfg(feature = "hashing")]
 use elliptic_curve::{
     group::cofactor::CofactorGroup,
     hash2curve::{ExpandMsg, Sgn0},
@@ -1139,7 +1138,6 @@ impl G2Projective {
             | self.z.is_zero()
     }
 
-    #[cfg(feature = "hashing")]
     /// Use a random oracle to map a value to a curve point
     pub fn hash<X>(msg: &[u8], dst: &[u8]) -> Self
     where
@@ -1154,7 +1152,6 @@ impl G2Projective {
         .clear_cofactor()
     }
 
-    #[cfg(feature = "hashing")]
     /// Use injective encoding to map a value to a curve point
     pub fn encode<X>(msg: &[u8], dst: &[u8]) -> Self
     where
@@ -1164,7 +1161,6 @@ impl G2Projective {
         Self::sswu_map(&u).isogeny_map().clear_cofactor()
     }
 
-    #[cfg(feature = "hashing")]
     /// simplified swu map for q = 9 mod 16 where AB == 0
     fn sswu_map(u: &Fp2) -> Self {
         const A: Fp2 = Fp2 {
@@ -1270,7 +1266,6 @@ impl G2Projective {
         Self { x, y, z: Fp2::ONE }
     }
 
-    #[cfg(feature = "hashing")]
     /// Computes the isogeny map for this point
     fn isogeny_map(&self) -> Self {
         use crate::isogeny::g2::*;
@@ -1595,7 +1590,6 @@ impl fmt::UpperHex for G2Projective {
     }
 }
 
-#[cfg(feature = "hashing")]
 impl CofactorGroup for G2Projective {
     type Subgroup = G2Projective;
 
@@ -2565,7 +2559,6 @@ fn test_commutative_scalar_subgroup_multiplication() {
     assert_eq!(g2_a * a, a * g2_a);
 }
 
-#[cfg(feature = "hashing")]
 #[test]
 fn test_hash() {
     use elliptic_curve::hash2curve::ExpandMsgXmd;

@@ -14,7 +14,7 @@ homepage = "https://github.com/mikelodder7/bls12_381_plus"
 license = "MIT/Apache-2.0"
 name = "bls12_381_plus"
 repository = "https://github.com/mikelodder7/bls12_381_plus"
-version = "0.8.13"
+version = "0.8.14"
 edition = "2021"
 
 [package.metadata.docs.rs]
@@ -44,7 +44,7 @@ required-features = ["groups"]
 
 [dependencies.elliptic-curve]
 version = "0.13"
-features = ["hazmat"]
+features = ["hash2curve", "hazmat"]
 default-features = false
 
 [dependencies.ff]
@@ -84,12 +84,15 @@ default-features = false
 [dependencies.arrayref]
 version = "0.3"
 
+[dependencies.sha2]
+version = "0.10"
+default-features = false
+
 [features]
-default = ["groups", "pairings", "alloc", "bits", "hashing"]
+default = ["groups", "pairings", "alloc", "bits"]
 bits = ["ff/bits"]
 expose-fields = ["groups"]
 groups = ["group"]
-hashing = ["elliptic-curve/hash2curve"]
 pairings = ["groups", "pairing"]
 alloc = ["group/alloc"]
 std = []

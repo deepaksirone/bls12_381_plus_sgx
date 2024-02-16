@@ -6,7 +6,6 @@ use core::convert::TryFrom;
 use core::fmt;
 use core::iter::{Iterator, Product, Sum};
 use core::ops::{Add, AddAssign, BitOr, Mul, MulAssign, Neg, Sub, SubAssign};
-#[cfg(feature = "hashing")]
 use elliptic_curve::{
     generic_array::{
         typenum::{U16, U64},
@@ -171,7 +170,6 @@ impl<'a, 'b> Mul<&'b Fp> for &'a Fp {
 impl_binops_additive!(Fp, Fp);
 impl_binops_multiplicative!(Fp, Fp);
 
-#[cfg(feature = "hashing")]
 impl FromOkm for Fp {
     type Length = U64;
 
@@ -181,7 +179,6 @@ impl FromOkm for Fp {
     }
 }
 
-#[cfg(feature = "hashing")]
 impl Sgn0 for Fp {
     fn sgn0(&self) -> Choice {
         let bytes = self.to_bytes();
@@ -189,7 +186,6 @@ impl Sgn0 for Fp {
     }
 }
 
-#[cfg(feature = "hashing")]
 impl OsswuMap for Fp {
     const PARAMS: OsswuMapParams<Self> = OsswuMapParams {
         c1: &[
@@ -278,7 +274,6 @@ impl OsswuMap for Fp {
     }
 }
 
-#[cfg(feature = "hashing")]
 impl MapToCurve for Fp {
     type Output = G1Projective;
 
@@ -293,7 +288,6 @@ impl MapToCurve for Fp {
     }
 }
 
-#[cfg(feature = "hashing")]
 impl Isogeny for Fp {
     type Degree = U16;
     const COEFFICIENTS: IsogenyCoefficients<Self> = IsogenyCoefficients {
@@ -915,7 +909,6 @@ impl Fp {
         res.is_zero().bitor(res.ct_eq(&Self::ONE))
     }
 
-    #[cfg(feature = "hashing")]
     /// Take 64 bytes and compute the result reduced by the field modulus
     pub(crate) fn from_random_bytes(okm: [u8; 64]) -> Self {
         Self::from_u768([
@@ -934,7 +927,6 @@ impl Fp {
         ])
     }
 
-    #[cfg(feature = "hashing")]
     pub(crate) fn hash<X>(msg: &[u8], dst: &[u8]) -> [Fp; 2]
     where
         X: for<'a> ExpandMsg<'a>,
@@ -949,7 +941,6 @@ impl Fp {
         ]
     }
 
-    #[cfg(feature = "hashing")]
     pub(crate) fn encode<X>(msg: &[u8], dst: &[u8]) -> Fp
     where
         X: for<'a> ExpandMsg<'a>,

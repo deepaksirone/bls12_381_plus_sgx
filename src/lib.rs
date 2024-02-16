@@ -157,5 +157,4 @@ pub use pairings::{pairing, Bls12, Gt, MillerLoopResult};
 #[cfg(feature = "pairings")]
 pub use pairings::{multi_miller_loop, G2Prepared};
 
-#[cfg(feature = "hashing")]
 mod isogeny;

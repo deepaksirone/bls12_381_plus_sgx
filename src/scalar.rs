@@ -747,7 +747,6 @@ impl Scalar {
     }
 
     /// Hashes the input messages and domain separation tag to a `Scalar`
-    #[cfg(feature = "hashing")]
     pub fn hash<X>(msg: &[u8], dst: &[u8]) -> Self
     where
         X: for<'a> elliptic_curve::hash2curve::ExpandMsg<'a>,

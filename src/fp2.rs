@@ -6,9 +6,7 @@ use rand_core::RngCore;
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
 use crate::fp::Fp;
-#[cfg(feature = "hashing")]
 use core::convert::TryFrom;
-#[cfg(feature = "hashing")]
 use elliptic_curve::hash2curve::{ExpandMsg, Expander, Sgn0};
 
 /// A point in the multiplicative group of order p^2
@@ -114,7 +112,6 @@ impl<'a, 'b> Mul<&'b Fp2> for &'a Fp2 {
 impl_binops_additive!(Fp2, Fp2);
 impl_binops_multiplicative!(Fp2, Fp2);
 
-#[cfg(feature = "hashing")]
 impl Sgn0 for Fp2 {
     fn sgn0(&self) -> Choice {
         if self.c0.is_zero().into() {
@@ -363,7 +360,6 @@ impl Fp2 {
         res
     }
 
-    #[cfg(feature = "hashing")]
     /// Take 64 bytes and compute the result reduced by the field modulus
     pub fn from_random_bytes(okm: [u8; 128]) -> Self {
         Self {
@@ -372,7 +368,6 @@ impl Fp2 {
         }
     }
 
-    #[cfg(feature = "hashing")]
     pub(crate) fn hash<X>(msg: &[u8], dst: &[u8]) -> [Self; 2]
     where
         X: for<'a> ExpandMsg<'a>,
@@ -387,7 +382,6 @@ impl Fp2 {
         ]
     }
 
-    #[cfg(feature = "hashing")]
     pub(crate) fn encode<X>(msg: &[u8], dst: &[u8]) -> Self
     where
         X: for<'a> ExpandMsg<'a>,

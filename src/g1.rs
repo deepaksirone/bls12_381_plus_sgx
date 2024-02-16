@@ -19,10 +19,9 @@ use crate::util::decode_hex_into_slice;
 use crate::Scalar;
 use elliptic_curve::consts::U48;
 use elliptic_curve::generic_array::GenericArray;
-use elliptic_curve::hash2curve::Sgn0;
+use elliptic_curve::hash2curve::{ExpandMsgXmd, Sgn0};
 use elliptic_curve::ops::{LinearCombination, MulByGenerator};
 use elliptic_curve::point::AffineCoordinates;
-#[cfg(feature = "hashing")]
 use elliptic_curve::{
     group::cofactor::CofactorGroup,
     hash2curve::{ExpandMsg, MapToCurve},
@@ -722,7 +721,6 @@ impl fmt::UpperHex for G1Projective {
     }
 }
 
-#[cfg(feature = "hashing")]
 impl CofactorGroup for G1Projective {
     type Subgroup = G1Projective;
 
@@ -1048,7 +1046,6 @@ impl G1Projective {
             | self.z.is_zero()
     }
 
-    #[cfg(feature = "hashing")]
     /// Use a random oracle to map a value to a curve point
     pub fn hash<X>(msg: &[u8], dst: &[u8]) -> Self
     where
@@ -1061,7 +1058,6 @@ impl G1Projective {
         .clear_cofactor()
     }
 
-    #[cfg(feature = "hashing")]
     /// Use injective encoding to map a value to a curve point
     pub fn encode<X>(msg: &[u8], dst: &[u8]) -> Self
     where
@@ -1194,25 +1190,9 @@ impl Group for G1Projective {
     type Scalar = Scalar;
 
     fn random(mut rng: impl RngCore) -> Self {
-        loop {
-            let x = Fp::random(&mut rng);
-            let flip_sign = rng.next_u32() % 2 != 0;
-
-            // Obtain the corresponding y-coordinate given x as y = sqrt(x^3 + 4)
-            let p = ((x.square() * x) + B).sqrt().map(|y| G1Affine {
-                x,
-                y: if flip_sign { -y } else { y },
-                infinity: 0.into(),
-            });
-
-            if p.is_some().into() {
-                let p = p.unwrap().to_curve().clear_cofactor();
-
-                if bool::from(!p.is_identity()) {
-                    return p;
-                }
-            }
-        }
+        let mut ikm = [0u8; 32];
+        rng.fill_bytes(&mut ikm);
+        Self::hash::<ExpandMsgXmd<sha2::Sha256>>(&ikm, b"BLS12381G1_XMD:SHA-256_SSWU_RO_")
     }
 
     fn identity() -> Self {
@@ -2095,7 +2075,6 @@ fn test_sum_of_products_alloc() {
     );
 }
 
-#[cfg(feature = "hashing")]
 #[test]
 fn test_hash() {
     use elliptic_curve::hash2curve::ExpandMsgXmd;
