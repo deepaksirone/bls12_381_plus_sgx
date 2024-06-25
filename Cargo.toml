@@ -21,7 +21,7 @@ edition = "2021"
 rustdoc-args = [ "--html-in-header", "katex-header.html" ]
 
 [lib]
-crate-type = ["cdylib", "rlib"]
+crate-type = ["rlib"]
 
 [dev-dependencies]
 hex = "0.4"
@@ -87,6 +87,11 @@ version = "0.3"
 [dependencies.sha2]
 version = "0.10"
 default-features = false
+
+#[dependencies.sgx_no_tstd]
+#git = "https://github.com/deepaksirone/incubator-teaclave-sgx-sdk.git"
+#default-features = false
+
 
 [features]
 default = ["groups", "pairings", "alloc", "bits"]
