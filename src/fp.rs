@@ -26,6 +26,7 @@ use crate::util::{adc, mac, sbb};
 /// integers in little-endian order. `Fp` values are always in
 /// Montgomery form; i.e., Scalar(a) = aR mod p, with R = 2^384.
 #[derive(Copy, Clone)]
+#[repr(C)]
 pub struct Fp(pub [u64; 6]);
 
 impl fmt::Debug for Fp {

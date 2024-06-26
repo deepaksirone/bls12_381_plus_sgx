@@ -24,6 +24,7 @@ use pairing::MultiMillerLoop;
 /// other until `.final_exponentiation()` is called, which is also expensive.
 #[cfg_attr(docsrs, doc(cfg(feature = "pairings")))]
 #[derive(Copy, Clone, Debug)]
+#[repr(C)]
 pub struct MillerLoopResult(pub(crate) Fp12);
 
 impl Default for MillerLoopResult {
@@ -208,6 +209,7 @@ impl<'b> AddAssign<&'b MillerLoopResult> for MillerLoopResult {
 /// keep code and abstractions consistent.
 #[cfg_attr(docsrs, doc(cfg(feature = "pairings")))]
 #[derive(Copy, Clone, Debug)]
+#[repr(C)]
 pub struct Gt(pub(crate) Fp12);
 
 impl Default for Gt {
@@ -679,6 +681,7 @@ impl GroupEncoding for Gt {
 
 /// The representation of bytes for Gt
 #[derive(Copy, Clone, Debug)]
+#[repr(C)]
 pub struct GtRepr([u8; Gt::BYTES]);
 
 impl Default for GtRepr {
@@ -722,6 +725,7 @@ impl_from_bytes!(Gt, |p: &Gt| p.to_bytes(), |arr: &[u8]| {
 
 #[cfg_attr(docsrs, doc(cfg(all(feature = "pairings"))))]
 #[derive(Clone, Debug)]
+#[repr(C)]
 /// This structure contains cached computations pertaining to a $\mathbb{G}_2$
 /// element as part of the pairing function (specifically, the Miller loop) and
 /// so should be computed whenever a $\mathbb{G}_2$ element is being used in

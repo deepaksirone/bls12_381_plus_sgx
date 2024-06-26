@@ -35,6 +35,7 @@ use elliptic_curve::{
 /// "unchecked" API was misused.
 #[cfg_attr(docsrs, doc(cfg(feature = "groups")))]
 #[derive(Copy, Clone, Debug)]
+#[repr(C)]
 pub struct G2Affine {
     pub(crate) x: Fp2,
     pub(crate) y: Fp2,
@@ -578,6 +579,7 @@ impl_serde!(
 /// This is an element of $\mathbb{G}_2$ represented in the projective coordinate space.
 #[cfg_attr(docsrs, doc(cfg(feature = "groups")))]
 #[derive(Copy, Clone, Debug)]
+#[repr(C)]
 pub struct G2Projective {
     pub(crate) x: Fp2,
     pub(crate) y: Fp2,
@@ -1298,6 +1300,7 @@ impl G2Projective {
 
 /// The compressed form of a G2 point
 #[derive(Clone, Copy)]
+#[repr(C)]
 pub struct G2Compressed([u8; 96]);
 
 impl fmt::Debug for G2Compressed {
@@ -1356,6 +1359,7 @@ impl_from_bytes!(G2Compressed, |p: &G2Compressed| p.0, |arr: &[u8]| {
 
 /// Group2 in it's uncompressed form
 #[derive(Clone, Copy)]
+#[repr(C)]
 pub struct G2Uncompressed([u8; 192]);
 
 impl fmt::Debug for G2Uncompressed {

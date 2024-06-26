@@ -91,6 +91,7 @@ use elliptic_curve::{
 
 /// An engine for operations generic G1 operations
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd)]
+#[repr(C)]
 pub struct Bls12381G1;
 
 unsafe impl Send for Bls12381G1 {}
@@ -98,6 +99,7 @@ unsafe impl Sync for Bls12381G1 {}
 
 /// An engine for operations generic G2 operations
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd)]
+#[repr(C)]
 pub struct Bls12381G2;
 
 impl Curve for Bls12381G1 {

@@ -32,6 +32,7 @@ use crate::util::{adc, decode_hex_into_slice, mac, sbb};
 // integers in little-endian order. `Scalar` values are always in
 // Montgomery form; i.e., Scalar(a) = aR mod q, with R = 2^256.
 #[derive(Clone, Copy, Eq)]
+#[repr(C)]
 pub struct Scalar(pub(crate) [u64; 4]);
 
 impl fmt::Debug for Scalar {

@@ -11,6 +11,7 @@ use elliptic_curve::hash2curve::{ExpandMsg, Expander, Sgn0};
 
 /// A point in the multiplicative group of order p^2
 #[derive(Copy, Clone)]
+#[repr(C)]
 pub struct Fp2 {
     /// The `a` portion
     pub c0: Fp,
